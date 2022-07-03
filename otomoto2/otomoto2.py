@@ -29,6 +29,17 @@ toaster = ToastNotifier()  # initialize win10toast
 start = time.time()  # run time start
 print("Starting...")
 
+# === create folders tree ===
+if not os.path.isdir("data"):
+    os.mkdir("data")
+    print("Folder ./data created")
+if not os.path.isdir("output"):
+    os.mkdir("output")
+    print("Folder ./output created")
+if not os.path.isdir("output/diff"):
+    os.mkdir("output/diff")
+    print("Folder ./output/diff created")
+
 # === have current date & time in exported files' names ===
 
 # https://www.w3schools.com/python/python_datetime.asp
@@ -42,9 +53,10 @@ try:  # might crash on first run
         # keep previous_run_datetime (last time the script ran) in a file so we can retrieve it later and compare / diff files
         previous_run_datetime = pickle.load(file)
         print("Previous run:", previous_run_datetime)
-except IOError:
+except IOError as e:
     # if it's the first time script is running we won't have the file created so we skip
-    print("First run - no file exists.")
+    #print("First run - no file exists.")
+    print(e)
 
 try:
     with open(file_saved_date, 'wb') as file:  # open pickle file
@@ -74,24 +86,25 @@ print("Page URL:", page_url_shortened[0])
 
 # === IFTTT automation ===
 
-file_saved_imk = '../data/imk.pk'
-try:  # might crash on first run
-    # load your data back to memory so we can save new value; NOTE: b = binary
-    with open(file_saved_imk, 'rb') as file:
-        ifttt_maker_key = pickle.load(file)
-except IOError:
-    print("First run - no file exists.")
+#file_saved_imk = '../data/imk.pk'
+#try:  # might crash on first run
+#    # load your data back to memory so we can save new value; NOTE: b = binary
+#    with open(file_saved_imk, 'rb') as file:
+#        ifttt_maker_key = pickle.load(file)
+#except IOError as e:
+#    #print("First run - no file exists.")
+#    print(e)
 
-event_name = 'new-car'
-webhook_url = 'https://maker.ifttt.com/trigger/{event_name}/with/key/{ifttt_maker_key}'
+#event_name = 'new-car'
+#webhook_url = 'https://maker.ifttt.com/trigger/{event_name}/with/key/{ifttt_maker_key}'
 
 
-def run_ifttt_automation(url, date, location):
-    report = {}
-    report["value1"] = url
-    report["value2"] = date
-    report["value3"] = location
-    requests.post(webhook_url, data=report)
+#def run_ifttt_automation(url, date, location):
+#    report = {}
+#    report["value1"] = url
+#    report["value2"] = date
+#    report["value3"] = location
+#    requests.post(webhook_url, data=report)
 
 # === pimp Windows 10 notification ===
 
@@ -305,13 +318,19 @@ except NameError:
 
         # set with lines from 1st file
         f1 = [x for x in file_previous_run.readlines()]
+        #print("previous", len(f1)) #debug
+        #print(*f1, sep = "\n") #debug
         # set with lines from 2nd file
         f2 = [x for x in file_current_run.readlines()]
+        #print("present", len(f2)) #debug
+        #print(*f2, sep = "\n") #debug
 
         # lines present only in 1st file
         diff = [line for line in f1 if line not in f2]
+        #print("previous_diff", len(diff)) #debug
         # lines present only in 2nd file
         diff1 = [line for line in f2 if line not in f1]
+        #print("present_diff", len(diff1)) #debug
         # *NOTE file2 must be > file1
 
         if len(diff1) == 0:  # check if set is empty - if it is then there are no differences between files
