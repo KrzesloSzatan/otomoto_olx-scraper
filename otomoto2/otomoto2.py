@@ -120,6 +120,10 @@ def open_url():
 
 # === function to scrape data ===
 
+page = urlopen(page_url, context=ssl.create_default_context(
+    cafile=certifi.where()))  # fix certificate issue
+soup = BeautifulSoup(page, 'html.parser')  # parse the page
+countLinks = len(soup.find_all('a', href=re.compile('oferta')))
 
 def pullData(page_url):
 
@@ -138,6 +142,17 @@ def pullData(page_url):
 
     print("Scraping page...")
     soup = BeautifulSoup(page, 'html.parser')  # parse the page
+    
+    with open(r"output/" + this_run_datetime + "/1-output-prices.txt", "a", encoding="utf-8") as bs_output2:
+            # print (colored("Creating local file to store URLs...", 'green')) # colored text on Windows
+            with alive_bar(bar="classic2", spinner="classic") as bar:  # progress bar
+                # find all links with 'oferta' in the href
+
+                for link, price in zip(soup.find_all('a', href=re.compile('oferta')), soup.find_all('span', {'class': 'ooa-epvm6 e1b25f6f8'})):
+                    bs_output2.write(link.get('href') + ' ' + price.text + '\n')
+                    
+                    bar()  # progress bar ++
+                    #print(link.get('href'), price.text)
 
     # 'a' (append) to add lines to existing file vs overwriting
     with open(r"output/" + this_run_datetime + "/1-output.txt", "a", encoding="utf-8") as bs_output:
@@ -145,6 +160,7 @@ def pullData(page_url):
         counter = 0  # counter to get # of URLs/cars
         with alive_bar(bar="classic2", spinner="classic") as bar:  # progress bar
             # find all links with 'oferta' in the href
+
             for link in soup.find_all('a', href=re.compile('oferta')):
                 # write to file just the clean URL
                 bs_output.write(link.get('href'))
@@ -190,33 +206,33 @@ while page_number <= number_of_pages_to_crawl:
 
 # === make file more pretty by adding new lines ===
 
-# open file...
-with open(r"output/" + this_run_datetime + "/1-output.txt", "r", encoding="utf-8") as scraping_output_file:
-    print("Reading file to clean up...")
-    read_scraping_output_file = scraping_output_file.read()  # ... and read it
+## open file...
+#with open(r"output/" + this_run_datetime + "/1-output.txt", "r", encoding="utf-8") as scraping_output_file:
+#    print("Reading file to clean up...")
+#    read_scraping_output_file = scraping_output_file.read()  # ... and read it
 
-# add new lines; remove IDs at the end of URL, eg '#e5c6831089'
-urls_line_by_line = re.sub(
-    r"#[a-zA-Z0-9]+(?!https$)://|https://|#[a-zA-Z0-9]+", "\n", read_scraping_output_file)
+## add new lines; remove IDs at the end of URL, eg '#e5c6831089'
+#urls_line_by_line = re.sub(
+#    r"#[a-zA-Z0-9]+(?!https$)://|https://|#[a-zA-Z0-9]+", "\n", read_scraping_output_file)
 
-urls_line_by_line = urls_line_by_line.replace(
-    "www", "https://www")  # make text clickable again
+#urls_line_by_line = urls_line_by_line.replace(
+#    "www", "https://www")  # make text clickable again
 
-print("Cleaning the file...")
+#print("Cleaning the file...")
 
 # === switch to a list to remove duplicates & sort ===
 
-carList = urls_line_by_line.split()  # remove "\n"; add to list
-uniqueCarList = list(set(carList))  # remove duplicates
-print(f'There are {len(uniqueCarList)} cars in total.')
+#carList = urls_line_by_line.split()  # remove "\n"; add to list
+#uniqueCarList = list(set(carList))  # remove duplicates
+#print(f'There are {countLinks} cars in total.')
 
-print("File cleaned up. New lines added.")
+#print("File cleaned up. New lines added.")
 
-with open(r"output/" + this_run_datetime + "/2-clean.txt", "w", encoding="utf-8") as clean_file:
-    for element in sorted(uniqueCarList):  # sort URLs
-        clean_file.write("%s\n" % element)  # write to file
+#with open(r"output/" + this_run_datetime + "/2-clean.txt", "w", encoding="utf-8") as clean_file:
+#    for element in sorted(uniqueCarList):  # sort URLs
+#        clean_file.write("%s\n" % element)  # write to file
 
-# === tailor the results by using a keyword: brand, model (possibly also engine size etc) ===
+## === tailor the results by using a keyword: brand, model (possibly also engine size etc) ===
 # TODO: mostly broken as of 0.9; core works
 
 # regex_user_input = input("Jak chcesz zawęzić wyniki? Możesz wpisać markę (np. BMW) albo model (np. E39) >>> ") # for now using brand as quesion but user can put any one-word keyword
@@ -245,7 +261,7 @@ else:
 
                 toast = Notification(app_id=f"Scrapper {randrange(10000)}",
                                      title="OTOMOTO Lexus RX",
-                                     msg=f'Znaleziono {str(counter2)} Auto.  W sumie jest {len(uniqueCarList)}. ',
+                                     msg=f'Znaleziono {str(counter2)} Auto.  W sumie jest {countLinks}. ',
                                      icon=r"C:\Users\Franz\otomoto\otomoto2\icons\lexus-logo.png")
                 toast.add_actions(label="Idz do strony",
                                   launch=page_url_shortened[0])
@@ -259,7 +275,7 @@ else:
 
                 toast = Notification(app_id=f"Scrapper {randrange(10000)}",
                                      title="OTOMOTO Lexus RX",
-                                     msg=f'Znaleziono {str(counter2)} Auta.  W sumie jest {len(uniqueCarList)}. ',
+                                     msg=f'Znaleziono {str(counter2)} Auta.  W sumie jest {countLinks}. ',
                                      icon=r"C:\Users\Franz\otomoto\otomoto2\icons\lexus-logo.png")
                 toast.add_actions(label="Idz do strony",
                                   launch=page_url_shortened[0])
@@ -312,9 +328,9 @@ except NameError:
 
     try:
         file_previous_run = open(
-            'output/' + previous_run_datetime + '/2-clean.txt', 'r')  # 1st file
+            'output/' + previous_run_datetime + '/1-output-prices.txt', 'r')  # 1st file
         file_current_run = open(
-            'output/' + this_run_datetime + '/2-clean.txt', 'r')  # 2nd file
+            'output/' + this_run_datetime + '/1-output-prices.txt', 'r')  # 2nd file
 
         # set with lines from 1st file
         f1 = [x for x in file_previous_run.readlines()]
@@ -343,7 +359,7 @@ except NameError:
 
             toast = Notification(app_id="Nie ma nowych aut",
                                  title="OTOMOTO Lexus RX",
-                                 msg=f'Nie ma nowych aut. W sumie jest {len(uniqueCarList)}.',
+                                 msg=f'Nie ma nowych aut. W sumie jest {countLinks}.',
                                  icon=r"C:\Users\Franz\otomoto\otomoto2\icons\lexus-logo.png")
             toast.add_actions(label="Idz do strony",
                               launch=page_url_shortened[0])
@@ -371,7 +387,7 @@ except NameError:
 
                 toast = Notification(app_id="Nie ma nowych aut",
                                      title="OTOMOTO Lexus RX",
-                                     msg=f'Nie ma nowych aut. W sumie jest {len(uniqueCarList)}.',
+                                     msg=f'Nie ma nowych aut. W sumie jest {countLinks}.',
                                      icon=r"C:\Users\Franz\otomoto\otomoto2\icons\lexus-logo.png")
                 toast.add_actions(label="Idz do strony",
                                   launch=page_url_shortened[0])
@@ -390,7 +406,7 @@ except NameError:
 
                 toast = Notification(app_id="Nowe Auta",
                                      title="OTOMOTO Lexus RX",
-                                     msg=f'Są nowe auta: {counter4}. W sumie jest {len(uniqueCarList)}.',
+                                     msg=f'Są nowe auta: {counter4}. W sumie jest {countLinks}.',
                                      icon=r"C:\Users\Franz\otomoto\otomoto2\icons\lexus-logo.png")
                 toast.add_actions(label="Idz do strony",
                                   launch=page_url_shortened[0])
