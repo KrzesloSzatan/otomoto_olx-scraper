@@ -1,5 +1,10 @@
 # === libs ===
 
+from os import walk
+from selenium import webdriver
+from selenium.webdriver import Firefox
+from selenium.webdriver.firefox.options import Options
+import difflib
 from winotify import Notification
 from random import randrange
 import gdshortener  # shorten URLs using is.gd e
@@ -39,6 +44,9 @@ if not os.path.isdir("output"):
 if not os.path.isdir("output/diff"):
     os.mkdir("output/diff")
     print("Folder ./output/diff created")
+if not os.path.isdir("screens"):
+    os.mkdir("screens")
+    print("Folder ./screans created")
 
 # === have current date & time in exported files' names ===
 
@@ -87,11 +95,11 @@ print("Page URL:", page_url_shortened[0])
 # === IFTTT automation ===
 
 #file_saved_imk = '../data/imk.pk'
-#try:  # might crash on first run
+# try:  # might crash on first run
 #    # load your data back to memory so we can save new value; NOTE: b = binary
 #    with open(file_saved_imk, 'rb') as file:
 #        ifttt_maker_key = pickle.load(file)
-#except IOError as e:
+# except IOError as e:
 #    #print("First run - no file exists.")
 #    print(e)
 
@@ -99,7 +107,7 @@ print("Page URL:", page_url_shortened[0])
 #webhook_url = 'https://maker.ifttt.com/trigger/{event_name}/with/key/{ifttt_maker_key}'
 
 
-#def run_ifttt_automation(url, date, location):
+# def run_ifttt_automation(url, date, location):
 #    report = {}
 #    report["value1"] = url
 #    report["value2"] = date
@@ -120,10 +128,36 @@ def open_url():
 
 # === function to scrape data ===
 
+
 page = urlopen(page_url, context=ssl.create_default_context(
     cafile=certifi.where()))  # fix certificate issue
 soup = BeautifulSoup(page, 'html.parser')  # parse the page
 countLinks = len(soup.find_all('a', href=re.compile('oferta')))
+
+with alive_bar(bar="classic2", spinner="classic") as bar:
+    mypath = r"screens"
+
+    filenames = next(walk(mypath), (None, None, []))[2]  # [] if no file
+    filenames = list(map(lambda x: x.replace('.png', ''), filenames))
+
+    urls = []
+    for url in soup.find_all('a', href=re.compile('oferta')):
+        urls.append(url.get('href'))
+    screenAble = [url for url in urls if not any(urls in url for urls in filenames)]
+
+    for link in screenAble:
+        print ('Making a screenshot of ' + link)
+        options = Options()
+        options.headless = True
+        name = link.replace('https://www.otomoto.pl/oferta/','')
+        png = name.replace('.html', '.png')
+        driver = webdriver.Firefox(options=options)
+        driver.set_window_position(0, 0)
+        driver.set_window_size(1500, 1200)
+        driver.get(link)
+        screenshot = driver.save_screenshot('.\\screens\\' + png)
+        driver.quit()
+        bar()
 
 def pullData(page_url):
 
@@ -142,17 +176,17 @@ def pullData(page_url):
 
     print("Scraping page...")
     soup = BeautifulSoup(page, 'html.parser')  # parse the page
-    
-    with open(r"output/" + this_run_datetime + "/1-output-prices.txt", "a", encoding="utf-8") as bs_output2:
-            # print (colored("Creating local file to store URLs...", 'green')) # colored text on Windows
-            with alive_bar(bar="classic2", spinner="classic") as bar:  # progress bar
-                # find all links with 'oferta' in the href
 
-                for link, price in zip(soup.find_all('a', href=re.compile('oferta')), soup.find_all('span', {'class': 'ooa-epvm6 e1b25f6f8'})):
-                    bs_output2.write(link.get('href') + ' ' + price.text + '\n')
-                    
-                    bar()  # progress bar ++
-                    #print(link.get('href'), price.text)
+    with open(r"output/" + this_run_datetime + "/1-output-prices.txt", "a", encoding="utf-8") as bs_output2:
+        # print (colored("Creating local file to store URLs...", 'green')) # colored text on Windows
+        with alive_bar(bar="classic2", spinner="classic") as bar:  # progress bar
+            # find all links with 'oferta' in the href
+
+            for link, price in zip(soup.find_all('a', href=re.compile('oferta')), soup.find_all('span', {'class': 'ooa-epvm6 e1b25f6f8'})):
+                bs_output2.write(link.get('href') + ' ' + price.text + '\n')
+
+                bar()  # progress bar ++
+                #print(link.get('href'), price.text)
 
     # 'a' (append) to add lines to existing file vs overwriting
     with open(r"output/" + this_run_datetime + "/1-output.txt", "a", encoding="utf-8") as bs_output:
@@ -206,33 +240,33 @@ while page_number <= number_of_pages_to_crawl:
 
 # === make file more pretty by adding new lines ===
 
-## open file...
-#with open(r"output/" + this_run_datetime + "/1-output.txt", "r", encoding="utf-8") as scraping_output_file:
+# open file...
+# with open(r"output/" + this_run_datetime + "/1-output.txt", "r", encoding="utf-8") as scraping_output_file:
 #    print("Reading file to clean up...")
 #    read_scraping_output_file = scraping_output_file.read()  # ... and read it
 
-## add new lines; remove IDs at the end of URL, eg '#e5c6831089'
-#urls_line_by_line = re.sub(
+# add new lines; remove IDs at the end of URL, eg '#e5c6831089'
+# urls_line_by_line = re.sub(
 #    r"#[a-zA-Z0-9]+(?!https$)://|https://|#[a-zA-Z0-9]+", "\n", read_scraping_output_file)
 
-#urls_line_by_line = urls_line_by_line.replace(
+# urls_line_by_line = urls_line_by_line.replace(
 #    "www", "https://www")  # make text clickable again
 
 #print("Cleaning the file...")
 
 # === switch to a list to remove duplicates & sort ===
 
-#carList = urls_line_by_line.split()  # remove "\n"; add to list
-#uniqueCarList = list(set(carList))  # remove duplicates
+# carList = urls_line_by_line.split()  # remove "\n"; add to list
+# uniqueCarList = list(set(carList))  # remove duplicates
 #print(f'There are {countLinks} cars in total.')
 
 #print("File cleaned up. New lines added.")
 
-#with open(r"output/" + this_run_datetime + "/2-clean.txt", "w", encoding="utf-8") as clean_file:
+# with open(r"output/" + this_run_datetime + "/2-clean.txt", "w", encoding="utf-8") as clean_file:
 #    for element in sorted(uniqueCarList):  # sort URLs
 #        clean_file.write("%s\n" % element)  # write to file
 
-## === tailor the results by using a keyword: brand, model (possibly also engine size etc) ===
+# === tailor the results by using a keyword: brand, model (possibly also engine size etc) ===
 # TODO: mostly broken as of 0.9; core works
 
 # regex_user_input = input("Jak chcesz zawęzić wyniki? Możesz wpisać markę (np. BMW) albo model (np. E39) >>> ") # for now using brand as quesion but user can put any one-word keyword
@@ -332,21 +366,38 @@ except NameError:
         file_current_run = open(
             'output/' + this_run_datetime + '/1-output-prices.txt', 'r')  # 2nd file
 
+        with open('output/' + previous_run_datetime + '/1-output-prices.txt') as file_1:
+            file_1_text = file_1.readlines()
+
+        with open('output/' + this_run_datetime + '/1-output-prices.txt') as file_2:
+            file_2_text = file_2.readlines()
+
+        # Find and print the diff:
+        changes = [line for line in difflib.ndiff(
+            file_1_text, file_2_text) if line.startswith('+ ') or line.startswith('- ')]
+        if len(changes) != 0:
+            with open('output/diff/diff2-' + this_run_datetime + '.txt', 'w') as w:
+                # counter4 = 0  # counter
+                with alive_bar(bar="circles", spinner="dots_waves") as bar:
+                    for url in changes:  # go piece by piece through the differences
+                        w.write(url)  # write to file
+                        bar()
+
         # set with lines from 1st file
         f1 = [x for x in file_previous_run.readlines()]
-        #print("previous", len(f1)) #debug
-        #print(*f1, sep = "\n") #debug
+        # print("previous", len(f1)) #debug
+        # print(*f1, sep = "\n") #debug
         # set with lines from 2nd file
         f2 = [x for x in file_current_run.readlines()]
-        #print("present", len(f2)) #debug
-        #print(*f2, sep = "\n") #debug
+        # print("present", len(f2)) #debug
+        # print(*f2, sep = "\n") #debug
 
         # lines present only in 1st file
         diff = [line for line in f1 if line not in f2]
-        #print("previous_diff", len(diff)) #debug
+        # print("previous_diff", len(diff)) #debug
         # lines present only in 2nd file
         diff1 = [line for line in f2 if line not in f1]
-        #print("present_diff", len(diff1)) #debug
+        # print("present_diff", len(diff1)) #debug
         # *NOTE file2 must be > file1
 
         if len(diff1) == 0:  # check if set is empty - if it is then there are no differences between files
@@ -374,7 +425,7 @@ except NameError:
                     for url in diff1:  # go piece by piece through the differences
                         w.write(url)  # write to file
                         # run IFTTT automation with URL
-                        run_ifttt_automation(url, this_run_datetime, location)
+                        #run_ifttt_automation(url, this_run_datetime, location)
                         # print('Running IFTTT automation...')
                         bar()
                         counter4 += 1  # counter++
