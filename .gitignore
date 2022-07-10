@@ -4,6 +4,7 @@
 TODO
 .vscode
 __pycache__
+test.py
 
 # mm-excel
 _mm-excel
@@ -14,15 +15,16 @@ _old
 # key
 data
 
-# files
+# folders
 olx1/data
 olx1/output
 olx2/data
 olx2/output
-otomoto1/data
-otomoto1/output
-otomoto2/data
-otomoto2/output
+data
+output
+icons
+screens
+
 
 # automate
 automate/*

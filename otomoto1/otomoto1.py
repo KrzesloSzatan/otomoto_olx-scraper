@@ -21,13 +21,6 @@ import webbrowser  # open browser
 import ssl  # certificate issue fix: https://stackoverflow.com/questions/52805115/certificate-verify-failed-unable-to-get-local-issuer-certificate
 import certifi  # certificate issue fix: https://stackoverflow.com/questions/52805115/certificate-verify-failed-unable-to-get-local-issuer-certificate
 from sys import platform  # check platform (Windows/Linux/macOS)
-# if os.name == 'nt':
-# if platform == 'win32':
-from win10toast_click import ToastNotifier  # Windows 10 notifications
-toaster = ToastNotifier()  # initialize win10toast
-# from termcolor import colored # colored input/output in terminal
-# elif platform == 'darwin':
-#    import pync  # macOS notifications
 
 # === start + run time ===
 
@@ -35,6 +28,8 @@ start = time.time()  # run time start
 print("Starting...")
 
 # === create folders tree ===
+
+print("Checking folders tree....")
 if not os.path.isdir("data"):
     os.mkdir("data")
     print("Folder ./data created")
@@ -47,7 +42,7 @@ if not os.path.isdir("output/diff"):
 if not os.path.isdir("screens"):
     os.mkdir("screens")
     print("Folder ./screans created")
-
+print("All folders are present.")
 
 # === have current date & time in exported files' names ===
 
@@ -82,7 +77,6 @@ if not os.path.isdir("output/" + this_run_datetime):
 
 # === URL to scrape ===
 
-# BMW 1, 140+ KM, AC, Pb/On, 2002+, 5k-20k PLN, Wrocław + 50 km, sort: newest
 page_url = "https://www.otomoto.pl/osobowe/bmw/x5/od-2012?search%5Bfilter_enum_fuel_type%5D%5B0%5D=hybrid&search%5Bfilter_enum_fuel_type%5D%5B1%5D=petrol&search%5Bfilter_enum_fuel_type%5D%5B2%5D=petrol-lpg&search%5Bfilter_enum_gearbox%5D=automatic&search%5Bfilter_enum_damaged%5D=0&search%5Bfilter_float_mileage%3Ato%5D=250000&search%5Bfilter_float_price%3Ato%5D=85000&search%5Border%5D=created_at_first%3Adesc&search%5Badvanced_search_expanded%5D=true"
 location = ""
 
@@ -127,7 +121,7 @@ def open_url():
     except:
         print('Failed to open search results. Unsupported variable type.')
 
-# === function to scrape data ===
+# === Taking screenshots ===
 
 
 page = urlopen(page_url, context=ssl.create_default_context(
@@ -136,21 +130,25 @@ soup = BeautifulSoup(page, 'html.parser')  # parse the page
 countLinks = len(soup.find_all('a', href=re.compile('oferta')))
 
 with alive_bar(bar="classic2", spinner="classic") as bar:
-    mypath = r"screens"
+    mypath = r"screens"  # Path to screens folder
 
     filenames = next(walk(mypath), (None, None, []))[2]  # [] if no file
-    filenames = list(map(lambda x: x.replace('.png', ''), filenames))
+    filenames = list(map(lambda x: x.replace('.png', ''),
+                     filenames))  # Get filenames only
 
-    urls = []
+    urls = []  # Empty urls list
     for url in soup.find_all('a', href=re.compile('oferta')):
-        urls.append(url.get('href'))
-    screenAble = [url for url in urls if not any(urls in url for urls in filenames)]
+        urls.append(url.get('href'))  # Add clean URLs to the list
+    screenAble = [url for url in urls if not any(
+        urls in url for urls in filenames)]  # Compare files with URLs and find only those URLs that are not already screanshotted
+
+# actual screenshot:
 
     for link in screenAble:
-        print ('Making a screenshot of ' + link)
+        print('Making a screenshot of ' + link)
         options = Options()
         options.headless = True
-        name = link.replace('https://www.otomoto.pl/oferta/','')
+        name = link.replace('https://www.otomoto.pl/oferta/', '')
         png = name.replace('.html', '.png')
         driver = webdriver.Firefox(options=options)
         driver.set_window_position(0, 0)
@@ -160,9 +158,12 @@ with alive_bar(bar="classic2", spinner="classic") as bar:
         driver.quit()
         bar()
 
+# === function to scrape data ===
+
+
 def pullData(page_url):
 
-    # ? can't crawl too often? works better with OTOMOTO limits perhaps
+    # can't crawl too often? works better with OTOMOTO limits perhaps
     pause_duration = 2  # seconds to wait
     print("Waiting for", pause_duration, "seconds before opening URL...")
     with alive_bar(pause_duration, bar="circles", spinner="dots_waves") as bar:
@@ -171,7 +172,6 @@ def pullData(page_url):
             bar()
 
     print("Opening page...")
-    # print (page_url) # debug
     page = urlopen(page_url, context=ssl.create_default_context(
         cafile=certifi.where()))  # fix certificate issue
 
@@ -179,15 +179,13 @@ def pullData(page_url):
     soup = BeautifulSoup(page, 'html.parser')  # parse the page
 
     with open(r"output/" + this_run_datetime + "/1-output-prices.txt", "a", encoding="utf-8") as bs_output2:
-        # print (colored("Creating local file to store URLs...", 'green')) # colored text on Windows
         with alive_bar(bar="classic2", spinner="classic") as bar:  # progress bar
             # find all links with 'oferta' in the href
 
             for link, price in zip(soup.find_all('a', href=re.compile('oferta')), soup.find_all('span', {'class': 'ooa-epvm6 e1b25f6f8'})):
+                # Write URL and price to file
                 bs_output2.write(link.get('href') + ' ' + price.text + '\n')
-
                 bar()  # progress bar ++
-                #print(link.get('href'), price.text)
 
     # 'a' (append) to add lines to existing file vs overwriting
     with open(r"output/" + this_run_datetime + "/1-output.txt", "a", encoding="utf-8") as bs_output:
@@ -221,7 +219,7 @@ soup = BeautifulSoup(page, 'html.parser')  # parse the page
 
 number_of_pages_to_crawl = ([item.get_text(strip=True) for item in soup.select(
     "span.page")])  # get page numbers from the bottom of the page
-# print(len(number_of_pages_to_crawl)) # debug; 0 = empty
+
 if len(number_of_pages_to_crawl) > 0:
     # get the last element from the list ^ to get the the max page # and convert to int
     number_of_pages_to_crawl = int(number_of_pages_to_crawl[-1])
@@ -238,34 +236,6 @@ while page_number <= number_of_pages_to_crawl:
     full_page_url = f"{page_url}{page_prefix}{page_number}"
     pullData(full_page_url)  # throw URL to function
     page_number += 1  # go to next page
-
-# === make file more pretty by adding new lines ===
-
-# open file...
-# with open(r"output/" + this_run_datetime + "/1-output.txt", "r", encoding="utf-8") as scraping_output_file:
-#    print("Reading file to clean up...")
-#    read_scraping_output_file = scraping_output_file.read()  # ... and read it
-
-# add new lines; remove IDs at the end of URL, eg '#e5c6831089'
-# urls_line_by_line = re.sub(
-#    r"#[a-zA-Z0-9]+(?!https$)://|https://|#[a-zA-Z0-9]+", "\n", read_scraping_output_file)
-
-# urls_line_by_line = urls_line_by_line.replace(
-#    "www", "https://www")  # make text clickable again
-
-#print("Cleaning the file...")
-
-# === switch to a list to remove duplicates & sort ===
-
-# carList = urls_line_by_line.split()  # remove "\n"; add to list
-# uniqueCarList = list(set(carList))  # remove duplicates
-#print(f'There are {countLinks} cars in total.')
-
-#print("File cleaned up. New lines added.")
-
-# with open(r"output/" + this_run_datetime + "/2-clean.txt", "w", encoding="utf-8") as clean_file:
-#    for element in sorted(uniqueCarList):  # sort URLs
-#        clean_file.write("%s\n" % element)  # write to file
 
 # === tailor the results by using a keyword: brand, model (possibly also engine size etc) ===
 # TODO: mostly broken as of 0.9; core works
@@ -294,7 +264,7 @@ else:
                 print("Found", counter2, "result.")
                 # if platform == "win32":
 
-                toast = Notification(app_id=f"Scrapper {randrange(10000)}",
+                toast = Notification(app_id=f"Nowe Auta",
                                      title="OTOMOTO BMW X5",
                                      msg=f'Znaleziono {str(counter2)} Auto.  W sumie jest {countLinks}. ',
                                      icon=r"C:\Users\Franz\otomoto\otomoto1\icons\bmw.png")
@@ -302,22 +272,17 @@ else:
                                   launch=page_url_shortened[0])
                 toast.show()
 
-                # toaster.show_toast("otomoto-scraper", "Found " + str(counter2) +
-                #                    " result.",  icon_path="icons/www.ico", duration=None)
             else:
                 print("Found", counter2, "results.")
                 # if platform == "win32":
 
-                toast = Notification(app_id=f"Scrapper {randrange(10000)}",
+                toast = Notification(app_id=f"Nowe Auta",
                                      title="OTOMOTO BMW X5",
                                      msg=f'Znaleziono {str(counter2)} Auta.  W sumie jest {countLinks}. ',
                                      icon=r"C:\Users\Franz\otomoto\otomoto1\icons\bmw.png")
                 toast.add_actions(label="Idz do strony",
                                   launch=page_url_shortened[0])
                 toast.show()
-
-                # toaster.show_toast("otomoto-scraper", "Found " + str(counter2) +
-                #                    " results.",  icon_path="icons/www.ico", duration=None)
 
 # === open keyword/search results ^ in browser ===
 
@@ -372,7 +337,6 @@ except NameError:
 
         with open('output/' + this_run_datetime + '/1-output-prices.txt') as file_2:
             file_2_text = file_2.readlines()
-                            
 
         # Find and print the diff:
         changes = [line for line in difflib.ndiff(
@@ -404,11 +368,6 @@ except NameError:
 
         if len(diff1) == 0:  # check if set is empty - if it is then there are no differences between files
             print('Files are the same.')
-            # if platform == "darwin":
-            #         pync.notify('Nie ma nowych aut.', title='OTOMOTO', open=page_url, contentImage="https://i.postimg.cc/t4qh2n6V/car.png") # appIcon="" doesn't work, using contentImage instead
-            # elif platform == "win32":
-            # duration = None  - leave notification in Notification Center
-            # threaded = True  - rest of the script will be allowed to be executed while the notification is still active
 
             toast = Notification(app_id="Nie ma nowych aut",
                                  title="OTOMOTO BMW X5",
@@ -418,8 +377,6 @@ except NameError:
                               launch=page_url_shortened[0])
             toast.show()
 
-            # toaster.show_toast(title="OTOMOTO", msg='Nie ma nowych aut.', icon_path="icons/car.ico",
-            #                    duration=None, threaded=True, callback_on_click=open_url)
         else:
             with open('output/diff/diff-' + this_run_datetime + '.txt', 'w') as w:
                 counter4 = 0  # counter
@@ -433,10 +390,6 @@ except NameError:
                         counter4 += 1  # counter++
             if counter4 <= 0:  # should not fire
                 print('No new cars since last run.')
-                # if platform == "darwin":
-                #     pync.notify('Nie ma nowych aut.', title='OTOMOTO', open=page_url, contentImage="https://i.postimg.cc/t4qh2n6V/car.png") # appIcon="" doesn't work, using contentImage instead
-                # elif platform == "win32":
-                # duration=None - leave notification in Notification Center; threaded=True - rest of the script will be allowed to be executed while the notification is still active
 
                 toast = Notification(app_id="Nie ma nowych aut",
                                      title="OTOMOTO BMW X5",
@@ -446,16 +399,8 @@ except NameError:
                                   launch=page_url_shortened[0])
                 toast.show()
 
-            # toaster.show_toast(title="OTOMOTO", msg='Nie ma nowych aut.', icon_path="icons/car.ico",
-            #                    duration=None, threaded=True, callback_on_click=open_url)
             else:
                 print(counter4, "new cars found since last run! Go check them now!")
-                # if platform == "darwin":
-                # appIcon="" doesn't work, using contentImage instead
-                # pync.notify(f'Nowe auta: {counter4}', title='OTOMOTO', open=page_url,
-                # contentImage="https://i.postimg.cc/t4qh2n6V/car.png", sound="Funk")
-                # elif platform == "win32":
-                # duration=None - leave notification in Notification Center; threaded=True - rest of the script will be allowed to be executed while the notification is still active
 
                 toast = Notification(app_id="Nowe Auta",
                                      title="OTOMOTO BMW X5",
@@ -465,8 +410,6 @@ except NameError:
                                   launch=page_url_shortened[0])
                 toast.show()
 
-                # toaster.show_toast(
-                #     title="OTOMOTO", msg=f'Nowe auta: {counter4}', icon_path="icons/car.ico", duration=None, threaded=True, callback_on_click=open_url)
                 time.sleep(5)
                 webbrowser.open(page_url)
 
