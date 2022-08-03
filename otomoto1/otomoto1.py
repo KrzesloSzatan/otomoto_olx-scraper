@@ -114,6 +114,15 @@ print("Page URL:", page_url_shortened[0])
 
 # https://stackoverflow.com/questions/63867448/interactive-notification-windows-10-using-python
 
+# === Global Variables ===
+
+hrefy = []
+ceny = []
+urls = []
+vins = []
+soup = BeautifulSoup()
+
+# === Function to open url after search ===
 
 def open_url():
     try:
@@ -122,93 +131,7 @@ def open_url():
     except:
         print('Failed to open search results. Unsupported variable type.')
 
-page = urlopen(page_url, context=ssl.create_default_context(
-    cafile=certifi.where()))  # fix certificate issue
-soup = BeautifulSoup(page, 'html.parser')  # parse the page
-
-hrefy = soup.find_all('a', href=re.compile('oferta'))
-ceny = soup.find_all('span', {'class': 'ooa-epvm6 e1b25f6f8'})
-
-urls = []  # Empty urls list
-for url in hrefy:
-    urls.append(url.get('href'))  # Add clean URLs to the list
-
-countLinks = len(hrefy)
-
-# === Scraping VINs ===
-
-with alive_bar(bar="classic2", spinner="classic") as bar:
-    vins = []
-    for url in urls:
-        try:
-            print('Scraping VIN of ' + url)
-            time.sleep(2)
-            page_vin = urlopen(url, context=ssl.create_default_context(
-                cafile=certifi.where()))  # fix certificate issue
-            soup_vin = BeautifulSoup(page_vin, 'html.parser')
-            vin = re.findall(
-                r'(?<=vin=)(.*?)(?=\&)', str(soup_vin.find('div', {'class': 'carfax-wrapper'})))
-            vins.append(vin[0])
-        except:
-            with open(r"output/" + this_run_datetime + "/1-output-error.txt", "a", encoding="utf-8") as bs_output4:
-
-                bs_output4.write('ERROR: ', sys.exc_info()[0], 'occurred.\n')
-                bs_output4.close()
-                print('ERROR: ', sys.exc_info()[0], 'occurred.')
-                print()
-                bar()
-
-lista = list(zip(hrefy, soup.find_all(
-    'span', {'class': 'ooa-epvm6 e1b25f6f8'}), vins))
-
-# DEBUG
-
-with open(r"output/" + this_run_datetime + "/1-output-debug.txt", "a", encoding="utf-8") as bs_output3:
-    # find all links with 'oferta' in the href
-
-    bs_output3.write(str(type(lista)) + ', ' + str(lista) + '\n\n')
-    bs_output3.write(str(type(hrefy)) + ', ' + str(hrefy) + '\n\n')
-    bs_output3.write(str(type(ceny)) + ', ' + str(ceny) + '\n\n')
-    bs_output3.write(str(type(vins)) + ', ' + str(vins) + '\n\n')
-
-    for link, price, vin in lista:
-        # Write URL and price to file
-        bs_output3.write(link.get('href') + ', ' +
-                         price.text + ', ' + vin + '\n')
-bs_output3.close()
-
-# DEBUG
-
-# === Taking screenshots ===
-
-with alive_bar(bar="classic2", spinner="classic") as bar:
-    mypath = r"screens"  # Path to screens folder
-
-    filenames = next(walk(mypath), (None, None, []))[2]  # [] if no file
-    filenames = list(map(lambda x: x.replace('.png', ''),
-                     filenames))  # Get filenames only
-
-    screenAble = [url for url in urls if not any(
-        urls in url for urls in filenames)]  # Compare files with URLs and find only those URLs that are not already screanshotted
-
-# actual screenshot:
-
-    for link in screenAble:
-        print('Making a screenshot of ' + link)
-        options = Options()
-        options.headless = True
-        name = link.replace('https://www.otomoto.pl/oferta/', '')
-        png = name.replace('.html', '.png')
-        driver = webdriver.Firefox(options=options)
-        driver.set_window_position(0, 0)
-        driver.set_window_size(1500, 1200)
-        driver.get(link)
-        screenshot = driver.save_screenshot('.\\screens\\' + png)
-        driver.quit()
-        bar()
-
 # === function to scrape data ===
-
 
 def pullData(page_url):
 
@@ -219,8 +142,61 @@ def pullData(page_url):
         for second in range(0, pause_duration):
             time.sleep(1)
             bar()
-
     print("Scraping page...")
+    page = urlopen(page_url, context=ssl.create_default_context(
+        cafile=certifi.where()))  # fix certificate issue
+    soup = BeautifulSoup(page, 'html.parser')  # parse the page
+
+    hrefy = soup.find_all('a', href=re.compile('oferta'))
+    ceny = soup.find_all('span', {'class': 'ooa-epvm6 e1b25f6f8'})
+
+    for url in hrefy:
+        urls.append(url.get('href'))  # Add clean URLs to the list
+
+# === Scraping VINs ===
+
+    with alive_bar(bar="classic2", spinner="classic") as bar:
+
+        for url in urls:
+            try:
+                print('Scraping VIN of ' + url)
+                time.sleep(2)
+                page_vin = urlopen(url, context=ssl.create_default_context(
+                    cafile=certifi.where()))  # fix certificate issue
+                soup_vin = BeautifulSoup(page_vin, 'html.parser')
+                vin = re.findall(
+                    r'(?<=vin=)(.*?)(?=\&)', str(soup_vin.find('div', {'class': 'carfax-wrapper'})))
+                vins.append(vin[0])
+            except:
+                with open(r"output/" + this_run_datetime + "/1-output-error.txt", "a", encoding="utf-8") as bs_output4:
+
+                    bs_output4.write('ERROR: ', sys.exc_info()[0], 'occurred.\n')
+                    bs_output4.close()
+                    print('ERROR: ', sys.exc_info()[0], 'occurred.')
+                    print()
+
+    lista = list(zip(hrefy, soup.find_all(
+        'span', {'class': 'ooa-epvm6 e1b25f6f8'}), vins))
+
+# DEBUG vvvvvvvvvvvvvvvvvvvvv
+
+    with open(r"output/" + this_run_datetime + "/1-output-debug.txt", "a", encoding="utf-8") as bs_output3:
+        # find all links with 'oferta' in the href
+
+        bs_output3.write(str(type(lista)) + ', ' + str(lista) + '\n\n')
+        bs_output3.write(str(type(hrefy)) + ', ' + str(hrefy) + '\n\n')
+        bs_output3.write(str(type(ceny)) + ', ' + str(ceny) + '\n\n')
+        bs_output3.write(str(type(vins)) + ', ' + str(vins) + '\n\n')
+
+        for link, price, vin in lista:
+            # Write URL and price to file
+            bs_output3.write(link.get('href') + ', ' +
+                            price.text + ', ' + vin + '\n')
+    bs_output3.close()
+
+# DEBUG ^^^^^^^^^^^^^^^^^^^^^
+
+# === Writing scraped data to files ===
 
     with open(r"output/" + this_run_datetime + "/1-output-prices.txt", "a", encoding="utf-8") as bs_output2:
         # find all links with 'oferta' in the href
@@ -245,20 +221,43 @@ def pullData(page_url):
                 # print ("Adding", counter, "URL to file...")
         print("Successfully added", counter, "cars to file.")
 
-# === get the number# of search results pages & run URLs in function ^ ===
+# === Taking screenshots ===
 
+    with alive_bar(bar="classic2", spinner="classic") as bar:
+        mypath = r"screens"  # Path to screens folder
+
+        filenames = next(walk(mypath), (None, None, []))[2]  # [] if no file
+        filenames = list(map(lambda x: x.replace('.png', ''),
+                        filenames))  # Get filenames only
+
+        screenAble = [url for url in urls if not any(
+            urls in url for urls in filenames)]  # Compare files with URLs and find only those URLs that are not already screanshotted
+
+    # actual screenshot:
+
+        for link in screenAble:
+            print('Making a screenshot of ' + link)
+            options = Options()
+            options.headless = True
+            name = link.replace('https://www.otomoto.pl/oferta/', '')
+            png = name.replace('.html', '.png')
+            driver = webdriver.Firefox(options=options)
+            driver.set_window_position(0, 0)
+            driver.set_window_size(1500, 1200)
+            driver.get(link)
+            screenshot = driver.save_screenshot('.\\screens\\' + png)
+            driver.quit()
+            bar()
+
+# === get the number# of search results pages & run URLs in function ^ ===
 
 # *NOTE 1/2: perhaps no longer needed as of 0.10?
 try:
     open(r"output/" + this_run_datetime + "/1-output.txt",
-         "w").close()# clean main file at start
+         "w").close()  # clean main file at start
 except:  # crashes on 1st run when file is not yet created
     print("Nothing to clean, moving on...")
 # *NOTE 2/2: ^
-
-page = urlopen(page_url, context=ssl.create_default_context(
-    cafile=certifi.where()))  # fix certificate issue; open URL
-soup = BeautifulSoup(page, 'html.parser')  # parse the page
 
 number_of_pages_to_crawl = ([item.get_text(strip=True) for item in soup.select(
     "span.page")])  # get page numbers from the bottom of the page
@@ -309,7 +308,7 @@ else:
 
                 toast = Notification(app_id=f"Nowe Auta",
                                      title="OTOMOTO BMW X5",
-                                     msg=f'Znaleziono {str(counter2)} Auto.  W sumie jest {countLinks}. ',
+                                     msg=f'Znaleziono {str(counter2)} Auto.  W sumie jest {len(urls)}. ',
                                      icon=r"C:\Users\Franz\otomoto\otomoto1\icons\bmw.png")
                 toast.add_actions(label="Idz do strony",
                                   launch=page_url_shortened[0])
@@ -321,7 +320,7 @@ else:
 
                 toast = Notification(app_id=f"Nowe Auta",
                                      title="OTOMOTO BMW X5",
-                                     msg=f'Znaleziono {str(counter2)} Auta.  W sumie jest {countLinks}. ',
+                                     msg=f'Znaleziono {str(counter2)} Auta.  W sumie jest {len(urls)}. ',
                                      icon=r"C:\Users\Franz\otomoto\otomoto1\icons\bmw.png")
                 toast.add_actions(label="Idz do strony",
                                   launch=page_url_shortened[0])
@@ -414,7 +413,7 @@ except NameError:
 
             toast = Notification(app_id="Nie ma nowych aut",
                                  title="OTOMOTO BMW X5",
-                                 msg=f'Nie ma nowych aut. W sumie jest {countLinks}.',
+                                 msg=f'Nie ma nowych aut. W sumie jest {len(f2)}.',
                                  icon=r"C:\Users\Franz\otomoto\otomoto1\icons\bmw.png")
             toast.add_actions(label="Idz do strony",
                               launch=page_url_shortened[0])
@@ -436,7 +435,7 @@ except NameError:
 
                 toast = Notification(app_id="Nie ma nowych aut",
                                      title="OTOMOTO BMW X5",
-                                     msg=f'Nie ma nowych aut. W sumie jest {countLinks}.',
+                                     msg=f'Nie ma nowych aut. W sumie jest {len(f2)}.',
                                      icon=r"C:\Users\Franz\otomoto\otomoto1\icons\bmw.png")
                 toast.add_actions(label="Idz do strony",
                                   launch=page_url_shortened[0])
@@ -447,7 +446,7 @@ except NameError:
 
                 toast = Notification(app_id="Nowe Auta",
                                      title="OTOMOTO BMW X5",
-                                     msg=f'Są nowe auta: {counter4}. W sumie jest {countLinks}.',
+                                     msg=f'Są nowe auta: {counter4}. W sumie jest {len(f2)}.',
                                      icon=r"C:\Users\Franz\otomoto\otomoto1\icons\bmw.png")
                 toast.add_actions(label="Idz do strony",
                                   launch=page_url_shortened[0])
