@@ -78,7 +78,8 @@ if not os.path.isdir("output/" + this_run_datetime):
 
 # === URL to scrape ===
 
-page_url = "https://www.otomoto.pl/osobowe/bmw/x5/od-2012?search%5Bfilter_enum_fuel_type%5D%5B0%5D=hybrid&search%5Bfilter_enum_fuel_type%5D%5B1%5D=petrol&search%5Bfilter_enum_fuel_type%5D%5B2%5D=petrol-lpg&search%5Bfilter_enum_gearbox%5D=automatic&search%5Bfilter_enum_damaged%5D=0&search%5Border%5D=created_at_first%3Adesc&search%5Bfilter_float_mileage%3Ato%5D=250000&search%5Bfilter_float_price%3Ato%5D=85000&search%5Badvanced_search_expanded%5D=true"
+# BMW 1, 140+ KM, AC, Pb/On, 2002+, 5k-20k PLN, Wrocław + 50 km, sort: newest
+page_url = "https://www.otomoto.pl/osobowe/mazda/mx-5/od-2010?search%5Bfilter_enum_fuel_type%5D%5B0%5D=petrol&search%5Bfilter_enum_fuel_type%5D%5B1%5D=petrol-lpg&search%5Bfilter_enum_damaged%5D=0&search%5Bfilter_float_price%3Ato%5D=50000&search%5Border%5D=created_at_first%3Adesc&search%5Badvanced_search_expanded%5D=true"
 location = ""
 
 # === shorten the URL ===
@@ -247,11 +248,10 @@ def pullData(page_url):
 
 # === get the number# of search results pages & run URLs in function ^ ===
 
-
 # *NOTE 1/2: perhaps no longer needed as of 0.10?
 try:
     open(r"output/" + this_run_datetime + "/1-output.txt",
-         "w").close()# clean main file at start
+         "w").close()  # clean main file at start
 except:  # crashes on 1st run when file is not yet created
     print("Nothing to clean, moving on...")
 # *NOTE 2/2: ^
@@ -308,24 +308,26 @@ else:
                 # if platform == "win32":
 
                 toast = Notification(app_id=f"Nowe Auta",
-                                     title="OTOMOTO BMW X5",
+                                     title="OTOMOTO Mazda MX-5",
                                      msg=f'Znaleziono {str(counter2)} Auto.  W sumie jest {countLinks}. ',
-                                     icon=r"C:\Users\Franz\otomoto\otomoto1\icons\bmw.png")
+                                     icon=r"C:\Users\Franz\otomoto\otomoto3\icons\mazda.png")
                 toast.add_actions(label="Idz do strony",
                                   launch=page_url_shortened[0])
                 toast.show()
+                open_url()
 
             else:
                 print("Found", counter2, "results.")
                 # if platform == "win32":
 
                 toast = Notification(app_id=f"Nowe Auta",
-                                     title="OTOMOTO BMW X5",
+                                     title="OTOMOTO Mazda MX-5",
                                      msg=f'Znaleziono {str(counter2)} Auta.  W sumie jest {countLinks}. ',
-                                     icon=r"C:\Users\Franz\otomoto\otomoto1\icons\bmw.png")
+                                     icon=r"C:\Users\Franz\otomoto\otomoto3\icons\mazda.png")
                 toast.add_actions(label="Idz do strony",
                                   launch=page_url_shortened[0])
                 toast.show()
+                open_url()
 
 # === open keyword/search results ^ in browser ===
 
@@ -413,9 +415,9 @@ except NameError:
             print('Files are the same.')
 
             toast = Notification(app_id="Nie ma nowych aut",
-                                 title="OTOMOTO BMW X5",
+                                 title="OTOMOTO Mazda MX-5",
                                  msg=f'Nie ma nowych aut. W sumie jest {countLinks}.',
-                                 icon=r"C:\Users\Franz\otomoto\otomoto1\icons\bmw.png")
+                                 icon=r"C:\Users\Franz\otomoto\otomoto3\icons\mazda.png")
             toast.add_actions(label="Idz do strony",
                               launch=page_url_shortened[0])
             toast.show()
@@ -435,9 +437,9 @@ except NameError:
                 print('No new cars since last run.')
 
                 toast = Notification(app_id="Nie ma nowych aut",
-                                     title="OTOMOTO BMW X5",
+                                     title="OTOMOTO Mazda MX-5",
                                      msg=f'Nie ma nowych aut. W sumie jest {countLinks}.',
-                                     icon=r"C:\Users\Franz\otomoto\otomoto1\icons\bmw.png")
+                                     icon=r"C:\Users\Franz\otomoto\otomoto3\icons\mazda.png")
                 toast.add_actions(label="Idz do strony",
                                   launch=page_url_shortened[0])
                 toast.show()
@@ -446,15 +448,16 @@ except NameError:
                 print(counter4, "new cars found since last run! Go check them now!")
 
                 toast = Notification(app_id="Nowe Auta",
-                                     title="OTOMOTO BMW X5",
+                                     title="OTOMOTO Mazda MX-5",
                                      msg=f'Są nowe auta: {counter4}. W sumie jest {countLinks}.',
-                                     icon=r"C:\Users\Franz\otomoto\otomoto1\icons\bmw.png")
+                                     icon=r"C:\Users\Franz\otomoto\otomoto3\icons\mazda.png")
                 toast.add_actions(label="Idz do strony",
                                   launch=page_url_shortened[0])
                 toast.show()
 
                 time.sleep(5)
-                webbrowser.open(page_url)
+                #webbrowser.open(page_url)
+                open_url()
 
     except IOError:
         print("No previous data - can't diff.")

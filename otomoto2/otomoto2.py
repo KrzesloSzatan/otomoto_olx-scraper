@@ -20,6 +20,7 @@ from alive_progress import alive_bar  # progress bar
 import webbrowser  # open browser
 import ssl  # certificate issue fix: https://stackoverflow.com/questions/52805115/certificate-verify-failed-unable-to-get-local-issuer-certificate
 import certifi  # certificate issue fix: https://stackoverflow.com/questions/52805115/certificate-verify-failed-unable-to-get-local-issuer-certificate
+import sys
 from sys import platform  # check platform (Windows/Linux/macOS)
 
 # === start + run time ===
@@ -122,13 +123,64 @@ def open_url():
     except:
         print('Failed to open search results. Unsupported variable type.')
 
-# === Taking screenshots ===
-
-
 page = urlopen(page_url, context=ssl.create_default_context(
     cafile=certifi.where()))  # fix certificate issue
 soup = BeautifulSoup(page, 'html.parser')  # parse the page
-countLinks = len(soup.find_all('a', href=re.compile('oferta')))
+
+hrefy = soup.find_all('a', href=re.compile('oferta'))
+ceny = soup.find_all('span', {'class': 'ooa-epvm6 e1b25f6f8'})
+
+urls = []  # Empty urls list
+for url in hrefy:
+    urls.append(url.get('href'))  # Add clean URLs to the list
+
+countLinks = len(hrefy)
+
+# === Scraping VINs ===
+
+with alive_bar(bar="classic2", spinner="classic") as bar:
+    vins = []
+    for url in urls:
+        try:
+            print('Scraping VIN of ' + url)
+            time.sleep(2)
+            page_vin = urlopen(url, context=ssl.create_default_context(
+                cafile=certifi.where()))  # fix certificate issue
+            soup_vin = BeautifulSoup(page_vin, 'html.parser')
+            vin = re.findall(
+                r'(?<=vin=)(.*?)(?=\&)', str(soup_vin.find('div', {'class': 'carfax-wrapper'})))
+            vins.append(vin[0])
+        except:
+            with open(r"output/" + this_run_datetime + "/1-output-error.txt", "a", encoding="utf-8") as bs_output4:
+
+                bs_output4.write('ERROR: ', sys.exc_info()[0], 'occurred.\n')
+                bs_output4.close()
+                print('ERROR: ', sys.exc_info()[0], 'occurred.')
+                print()
+                bar()
+
+lista = list(zip(hrefy, soup.find_all(
+    'span', {'class': 'ooa-epvm6 e1b25f6f8'}), vins))
+
+# DEBUG
+
+with open(r"output/" + this_run_datetime + "/1-output-debug.txt", "a", encoding="utf-8") as bs_output3:
+    # find all links with 'oferta' in the href
+
+    bs_output3.write(str(type(lista)) + ', ' + str(lista) + '\n\n')
+    bs_output3.write(str(type(hrefy)) + ', ' + str(hrefy) + '\n\n')
+    bs_output3.write(str(type(ceny)) + ', ' + str(ceny) + '\n\n')
+    bs_output3.write(str(type(vins)) + ', ' + str(vins) + '\n\n')
+
+    for link, price, vin in lista:
+        # Write URL and price to file
+        bs_output3.write(link.get('href') + ', ' +
+                         price.text + ', ' + vin + '\n')
+bs_output3.close()
+
+# DEBUG
+
+# === Taking screenshots ===
 
 with alive_bar(bar="classic2", spinner="classic") as bar:
     mypath = r"screens"  # Path to screens folder
@@ -137,9 +189,6 @@ with alive_bar(bar="classic2", spinner="classic") as bar:
     filenames = list(map(lambda x: x.replace('.png', ''),
                      filenames))  # Get filenames only
 
-    urls = []  # Empty urls list
-    for url in soup.find_all('a', href=re.compile('oferta')):
-        urls.append(url.get('href'))  # Add clean URLs to the list
     screenAble = [url for url in urls if not any(
         urls in url for urls in filenames)]  # Compare files with URLs and find only those URLs that are not already screanshotted
 
@@ -165,28 +214,22 @@ with alive_bar(bar="classic2", spinner="classic") as bar:
 def pullData(page_url):
 
     # can't crawl too often? works better with OTOMOTO limits perhaps
-    pause_duration = 2  # seconds to wait
+    pause_duration = 5  # seconds to wait
     print("Waiting for", pause_duration, "seconds before opening URL...")
     with alive_bar(pause_duration, bar="circles", spinner="dots_waves") as bar:
         for second in range(0, pause_duration):
             time.sleep(1)
             bar()
 
-    print("Opening page...")
-    page = urlopen(page_url, context=ssl.create_default_context(
-        cafile=certifi.where()))  # fix certificate issue
-
     print("Scraping page...")
-    soup = BeautifulSoup(page, 'html.parser')  # parse the page
 
     with open(r"output/" + this_run_datetime + "/1-output-prices.txt", "a", encoding="utf-8") as bs_output2:
-        with alive_bar(bar="classic2", spinner="classic") as bar:  # progress bar
-            # find all links with 'oferta' in the href
-
-            for link, price in zip(soup.find_all('a', href=re.compile('oferta')), soup.find_all('span', {'class': 'ooa-epvm6 e1b25f6f8'})):
-                # Write URL and price to file
-                bs_output2.write(link.get('href') + ' ' + price.text + '\n')
-                bar()  # progress bar ++
+        # find all links with 'oferta' in the href
+        for link, price, vin in lista:
+            # Write URL and price to file
+            bs_output2.write(link.get('href') + ', ' +
+                             price.text + ', ' + vin + '\n')
+    bs_output2.close()
 
     # 'a' (append) to add lines to existing file vs overwriting
     with open(r"output/" + this_run_datetime + "/1-output.txt", "a", encoding="utf-8") as bs_output:
@@ -195,7 +238,7 @@ def pullData(page_url):
         with alive_bar(bar="classic2", spinner="classic") as bar:  # progress bar
             # find all links with 'oferta' in the href
 
-            for link in soup.find_all('a', href=re.compile('oferta')):
+            for link in hrefy:
                 # write to file just the clean URL
                 bs_output.write(link.get('href'))
                 counter += 1  # counter ++
@@ -213,10 +256,6 @@ try:
 except:  # crashes on 1st run when file is not yet created
     print("Nothing to clean, moving on...")
 # *NOTE 2/2: ^
-
-page = urlopen(page_url, context=ssl.create_default_context(
-    cafile=certifi.where()))  # fix certificate issue; open URL
-soup = BeautifulSoup(page, 'html.parser')  # parse the page
 
 number_of_pages_to_crawl = ([item.get_text(strip=True) for item in soup.select(
     "span.page")])  # get page numbers from the bottom of the page
@@ -272,6 +311,7 @@ else:
                 toast.add_actions(label="Idz do strony",
                                   launch=page_url_shortened[0])
                 toast.show()
+                open_url()
 
             else:
                 print("Found", counter2, "results.")
@@ -284,6 +324,7 @@ else:
                 toast.add_actions(label="Idz do strony",
                                   launch=page_url_shortened[0])
                 toast.show()
+                open_url()
 
 # === open keyword/search results ^ in browser ===
 
@@ -304,14 +345,14 @@ else:
                 print("Opened ", str(counter3),
                       " URLs in the browser. Go and check them before they go 404 ;)")
                 # if platform == "win32":
-                toaster.show_toast("otomoto-scraper", "Opened " + str(counter3) +
-                                   " URLs.",  icon_path="icons/www.ico", duration=None)
+                # toaster.show_toast("otomoto-scraper", "Opened " + str(counter3) +
+                #                    " URLs.",  icon_path="icons/www.ico", duration=None)
             else:  # correct grammar for 1 (URL; it)
                 print("Opened", counter3,
                       "URL in the browser. Go and check it before it goes 404 ;)")
                 # if platform == "win32":
-                toaster.show_toast("otomoto-scraper", "Opened " + str(counter3) +
-                                   " URL.",  icon_path="icons/www.ico", duration=None)
+                # toaster.show_toast("otomoto-scraper", "Opened " + str(counter3) +
+                #                    " URL.",  icon_path="icons/www.ico", duration=None)
         else:
             # print ("Ok - URLs saved in 'output/search-output.txt' anyway.")
             print("Ok - URLs saved to a file.")
@@ -412,7 +453,8 @@ except NameError:
                 toast.show()
 
                 time.sleep(5)
-                webbrowser.open(page_url)
+                # webbrowser.open(page_url)
+                open_url()
 
     except IOError:
         print("No previous data - can't diff.")

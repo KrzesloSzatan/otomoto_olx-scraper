@@ -5,6 +5,7 @@ TODO
 .vscode
 __pycache__
 test.py
+geckodriver.log
 
 # mm-excel
 _mm-excel
