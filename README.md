@@ -12,23 +12,19 @@
 ![macOS](https://user-images.githubusercontent.com/6877391/111393391-f9eb8b80-86b8-11eb-98a3-4e908790656d.png)
 
 ## How to use
-### macOS 
-How to chain the scripts:
-```sh
-# automate.sh
-cd "PATH/otomoto_olx-scraper/otomoto1"
-python3 otomoto1.py
-cd ..
-cd otomoto2
-python3 otomoto2.py
-cd .. 
-cd olx1
-python3 olx1.py
-cd .. 
-cd olx2
-python3 olx2.py
-```
-Add ^ to Automator, export as Application and then run in the background via Script Editor.
+### Windows
+
+Run it with parameters like below:
+
+parser.add_argument('--url', '-u')
+parser.add_argument('--title', '-t')
+parser.add_argument('--icon', '-i')
+parser.add_argument('--prefix', '-p')
+
+Ex:
+
+python3 .\otomoto.py --url "https://www.otomoto.pl/osobowe/mazda/mx-5/od-2010?search%5Bfilter_enum_fuel_type%5D%5B0%5D=petrol&search%5Bfilter_enum_fuel_type%5D%5B1%5D=petrol-lpg&search%5Bfilter_enum_damaged%5D=0&search%5Bfilter_float_price%3Ato%5D=50000&search%5Border%5D=created_at_first%3Adesc&search%5Badvanced_search_expanded%5D=true" --title "Mazda MX-5" --icon "mazda" --prefix "mazda"
+
 
 <!-- ## Roadmap
 
