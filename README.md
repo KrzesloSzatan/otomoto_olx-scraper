@@ -1,25 +1,27 @@
-# otomoto_olx-scraper
+# otomoto-scraper
 
-![](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-blue)
+Orginates from https://github.com/vardecab/otomoto_olx-scraper
 
->Scrape car offers from OTOMOTO․pl & OLX․pl and run IFTTT automation (eg. send email; add a to-do task) when new car(s) matching search criteria is found. With support for native macOS & Windows 10 notifications. 
+![](https://img.shields.io/badge/platform-Windows-blue)
+
+>Scrape car offers from OTOMOTO․pl when new car(s) matching search criteria is found. With support for native Windows 10 notifications. In output folder you can find diff2... file which consists a change that happened, if there is new car it will show "+ url_to_new_car, price, VIN". If the car was sold it shows "- url_to_new_car, price, VIN". If there is a price change it will show both in one file with the same urls but different price. It will also create a screenshot of the car page so you can check which one exactly it is/was. Screenshot is taken only once, when the car appears for the first time to the script, so any changes to the price will not be screenshotted again. 
+
+>This one was redone by me only for OTOMOTO. I havent touched OLX so it works (or not?) as in the source repo. 
 
 <!-- Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. Aenean massa. Cumanos sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Donec quam felis, ultricies nec, pellentesque eu, pretium quis, sem. Nulla consequat massa quis enim. -->
-
-## Screenshots
-
-![Windows](https://user-images.githubusercontent.com/6877391/111393389-f952f500-86b8-11eb-92d7-096ce4964b48.png)
-![macOS](https://user-images.githubusercontent.com/6877391/111393391-f9eb8b80-86b8-11eb-98a3-4e908790656d.png)
 
 ## How to use
 ### Windows
 
 Run it with parameters like below:
 
-parser.add_argument('--url', '-u')
-parser.add_argument('--title', '-t')
-parser.add_argument('--icon', '-i')
-parser.add_argument('--prefix', '-p')
+parser.add_argument('--url', '-u') -> This is the URL that you get after choosing all the filters on Otomoto site
+
+parser.add_argument('--title', '-t') -> This is the title for Windows notifications
+
+parser.add_argument('--icon', '-i') -> Icon name that has to be placed in .\otomoto\icons folder (folder can be created manually before first run or it will be created by script after first run. Then you have to put your icon inside this folder. Icons have to be in .png. For best look img has to be square. Ex: name.png -> --icon "name")
+
+parser.add_argument('--prefix', '-p') -> Folder name for where all the scraped data will be stored for this search (Ex. --prefix "make" .\otomoto\make, --prefix "mazda" .\otomoto\mazda, --prefix "bmw" .\otomoto\bmw, etc. )
 
 Ex:
 
@@ -29,32 +31,6 @@ python3 .\otomoto.py --url "https://www.otomoto.pl/osobowe/mazda/mx-5/od-2010?se
 <!-- ## Roadmap
 
 - lorem ipsum -->
-
-## Release History
-
-- 0.14: Updated the URLs and BeautifulSoup's selectors so the script works again for OTOMOTO.
-- 0.13: Two files per each platform to support searches in two different locations; improved pagination support on OLX; improved regex; more data sent to IFTTT.
-- 0.12.4: Fixed a bug that prevented the script from running because there was only one OTOMOTO subpage to scrape.
-- 0.12.3: Disabled the option to open browser with search results page; changed URLs.
-- 0.12.2: Added date as 2nd parameter to IFTTT automation. 
-- 0.12.1: Tiny bug fix around certificate issue on macOS when requesting a URL.
-- 0.12: Added OLX․pl support 🎉
-- 0.11.1: Replaced old `win10toast` module with `win10toast-click`.
-- 0.11: Improved Windows 10 notifications to open URL on-click using [win10toast-click](https://github.com/vardecab/win10toast-click); added URL shortening module; renamed a few variables; cleaned up project structure.
-- 0.10: Pagination support - script will scrape only the # of pages that are available for certain search query instead of relying on hard-coded value. Also: turned off notifications when there are no new cars; fixed a bug that prevented adding more than 32 cars to the file.
-- 0.9: Cleaned the code - renamed variables & function, reduced number of `.txt` files used; fixed a bug that was causing false positivies because of empty lines, `\n` characters and duplicates; *broke* keyword-search functionality which is not being utilized right now anyway. 
-- 0.8: Changed URL; attempt to hide API key; changes to notifications.
-- 0.7: Notifications (Windows & macOS; showing script's run time in seconds; improved regex formula to remove IDs at the end of URLs. 
-- 0.6: Sending email via IFTTT if new car is found.
-- 0.5: Disabled user input once again - hardcoded values; implemented file diff; files & folders are created with unique ID.
-- 0.4: Re-enabled user input; minor tweak to URL params; improved compatibility with macOS.
-- 0.3: Disabled user input; improved compatibility with macOS.
-- 0.2: Opening URLs from search results. Windows 10 notification when opening URLs; delaying crawling; renamed some variables for better clarity.
-- 0.1: Initial release.
-
-## Versioning
-
-Using [SemVer](http://semver.org/).
 
 ## License
 
@@ -75,16 +51,8 @@ Using [SemVer](http://semver.org/).
 
 ### Stack Overflow
 - [certificate issue fix](https://stackoverflow.com/questions/52805115/certificate-verify-failed-unable-to-get-local-issuer-certificate)
-- [click Windows 10 notification to open URL](https://stackoverflow.com/questions/63867448/interactive-notification-windows-10-using-python)
 
 ### Other
-- [Flaticon / Freepik](https://www.flaticon.com/)
 - [IFTTT](https://ifttt.com/)
 - [Connect a Python Script to IFTTT by Enrico Bergamini](https://medium.com/mai-piu-senza/connect-a-python-script-to-ifttt-8ee0240bb3aa)
 - [Use IFTTT web requests to send email alerts by Anthony Hartup](https://anthscomputercave.com/tutorials/ifttt/using_ifttt_web_request_email.html)
-
-## Contributing
-
-![](https://img.shields.io/github/issues/vardecab/otomoto_olx-scraper)
-
-If you found a bug or want to propose a feature, feel free to visit [the Issues page](https://github.com/vardecab/otomoto_olx-scraper/issues).
