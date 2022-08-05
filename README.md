@@ -13,15 +13,19 @@ Orginates from https://github.com/vardecab/otomoto_olx-scraper
 ## How to use
 ### Windows
 
+>:warning: First run will create all the necessary folders and gather first data, so there will be no notification since only after second run comparison will be possible. If you have not created .\icons folder before now is the time to put .png file inside and use it for notification which will come after second run. :warning:
+
 Run it with parameters like below:
 
-parser.add_argument('--url', '-u') -> This is the URL that you get after choosing all the filters on Otomoto site
+```python
+parser.add_argument('--url', '-u') # This is the URL that you get from your browser after choosing all the filters on Otomoto site
 
-parser.add_argument('--title', '-t') -> This is the title for Windows notifications
+parser.add_argument('--title', '-t') # This is the title for Windows notifications
 
-parser.add_argument('--icon', '-i') -> Icon name that has to be placed in .\otomoto\icons folder (folder can be created manually before first run or it will be created by script after first run. Then you have to put your icon inside this folder. Icons have to be in .png. For best look img has to be square. Ex: name.png -> --icon "name")
+parser.add_argument('--icon', '-i') # Icon name that has to be placed in .\otomoto\icons folder (folder can be created manually before first run or it will be created by script after first run. Then you have to put your icon inside this folder. Icons have to be in .png. For best look img has to be square. Ex: name.png -> --icon "name")
 
-parser.add_argument('--prefix', '-p') -> Folder name for where all the scraped data will be stored for this search (Ex. --prefix "make" .\otomoto\make, --prefix "mazda" .\otomoto\mazda, --prefix "bmw" .\otomoto\bmw, etc. )
+parser.add_argument('--prefix', '-p') # Folder name for where all the scraped data will be stored for this search (Ex. --prefix "make" -> .\otomoto\make, --prefix "mazda" -> .\otomoto\mazda, --prefix "bmw" -> .\otomoto\bmw, etc. )
+```
 
 Ex:
 

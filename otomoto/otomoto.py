@@ -24,6 +24,8 @@ import sys
 from sys import platform  # check platform (Windows/Linux/macOS)
 import argparse
 from pathlib import Path
+import random
+
 
 self_path = Path(os.path.abspath(__file__))
 
@@ -160,8 +162,6 @@ soup = BeautifulSoup(page, 'html.parser')  # parse the page
 number_of_pages_to_crawl = ([item.get_text(strip=True) for item in soup.find_all(
     'a', {'class': 'ooa-g4wbjr'})])  # get page numbers from the bottom of the page
 
-print('pages to crawl: ', len(number_of_pages_to_crawl))
-
 if len(number_of_pages_to_crawl) > 0:
     # get the last element from the list ^ to get the the max page # and convert to int
     number_of_pages_to_crawl = int(number_of_pages_to_crawl[-1])
@@ -195,7 +195,7 @@ while page_number <= number_of_pages_to_crawl:
     vins = []
 
     hrefy = soup.find_all('a', href=re.compile('oferta'))
-    ceny = soup.find_all('span', {'class': 'ooa-epvm6 e1b25f6f8'})
+    ceny = soup.find_all('span', {'class': 'ooa-epvm6'})
 
     for url in hrefy:
         if url.get('href') not in urls:
@@ -226,7 +226,7 @@ while page_number <= number_of_pages_to_crawl:
                     print('ERROR: ', str(e), 'occurred.', url, str(vin))
 
     lista = list(zip(urls, soup.find_all(
-        'span', {'class': 'ooa-epvm6 e1b25f6f8'}), vins))
+        'span', {'class': 'ooa-epvm6'}), vins))
 
     # DEBUG vvvvvvvvvvvvvvvvvvvvv
 
@@ -410,85 +410,127 @@ try:
     # Find and print the diff:
     changes = [line for line in difflib.ndiff(
         file_1_text, file_2_text) if line.startswith('+ ') or line.startswith('- ')]
+
     if len(changes) != 0:
         with open(args.prefix + '/output/diff/diff2-' + this_run_datetime + '.txt', 'w') as w:
             # counter4 = 0  # counter
             with alive_bar(bar="circles", spinner="dots_waves") as bar:
                 for url in changes:  # go piece by piece through the differences
                     w.write(url)  # write to file
-                    bar()
-
-    # set with lines from 1st file
-    f1 = [x for x in file_previous_run.readlines()]
-    # print("previous", len(f1)) #debug
-    # print(*f1, sep = "\n") #debug
-    # set with lines from 2nd file
-    f2 = [x for x in file_current_run.readlines()]
-    # print("present", len(f2)) #debug
-    # print(*f2, sep = "\n") #debug
-
-    # lines present only in 1st file
-    diff = [line for line in f1 if line not in f2]
-    # print("previous_diff", len(diff)) #debug
-    # lines present only in 2nd file
-    diff1 = [line for line in f2 if line not in f1]
-    # print("present_diff", len(diff1)) #debug
-    # *NOTE file2 must be > file1
-
-    if len(diff1) == 0:  # check if set is empty - if it is then there are no differences between files
-        print('Files are the same.')
-
+                    time.sleep(1)
+                    if url.startswith('- ') and (len(re.findall(re.findall(r'(?<=\+ |\- )(.*?)(?=\,)', url)[0], str(changes))) % 2 == 0):
+                        clean_url = re.findall(
+                            r'(?<=\+ |\- )(.*?)(?=\,)', str(url))
+                        # toast = Notification(app_id=f'{random.randint(0,100)}',
+                        toast = Notification(app_id='Zmiana ceny',
+                                             title="OTOMOTO " + args.title,
+                                             msg=f'Zmieniła się cena auta.',
+                                             icon=str(self_path.parent.absolute()) + "\\icons\\" + args.icon + ".png")
+                        toast.add_actions(label="Idz do auta",
+                                          launch=clean_url[0])
+                        toast.show()
+                        bar()
+                    if url.startswith('+ ') and (len(re.findall(re.findall(r'(?<=\+ |\- )(.*?)(?=\,)', url)[0], str(changes))) % 2 != 0):
+                        clean_url = re.findall(
+                            r'(?<=\+ |\- )(.*?)(?=\,)', str(url))
+                        # toast = Notification(app_id=f'{random.randint(0,100)}',
+                        toast = Notification(app_id='Nowe auto',
+                                             title="OTOMOTO " + args.title,
+                                             msg=f'Pojawiło się nowe auto !',
+                                             icon=str(self_path.parent.absolute()) + "\\icons\\" + args.icon + ".png")
+                        toast.add_actions(label="Idz do auta",
+                                          launch=clean_url[0])
+                        toast.show()
+                        bar()
+                    if url.startswith('- ') and (len(re.findall(re.findall(r'(?<=\+ |\- )(.*?)(?=\,)', url)[0], str(changes))) % 2 != 0):
+                        clean_url = re.findall(
+                            r'(?<=\+ |\- )(.*?)(?=\,)', str(url))
+                        # toast = Notification(app_id=f'{random.randint(0,100)}',
+                        toast = Notification(app_id='Sprzedane auto',
+                                             title="OTOMOTO " + args.title,
+                                             msg=f'Auto zostało wycofane ze sprzedaży. W sumie jest {len(urls)}.',
+                                             icon=str(self_path.parent.absolute()) + "\\icons\\" + args.icon + ".png")
+                        toast.add_actions(
+                            label="Zobacz pozostałe auta", launch=page_url_shortened[0])
+                        toast.show()
+                        bar()
+    else:
         toast = Notification(app_id="Nie ma nowych aut",
                              title="OTOMOTO " + args.title,
-                             msg=f'Nie ma nowych aut. W sumie jest {len(f2)}.',
+                             msg=f'Nie ma nowych aut. W sumie jest {len(urls)}.',
                              icon=str(self_path.parent.absolute()) + "\\icons\\" + args.icon + ".png")
         toast.add_actions(label="Idz do strony",
                           launch=page_url_shortened[0])
         toast.show()
+        bar()
 
-    else:
-        with open(args.prefix + '/output/diff/diff-' + this_run_datetime + '.txt', 'w') as w:
-            counter4 = 0  # counter
-            with alive_bar(bar="circles", spinner="dots_waves") as bar:
-                for url in diff1:  # go piece by piece through the differences
-                    w.write(url)  # write to file
-                    # run IFTTT automation with URL
-                    #run_ifttt_automation(url, this_run_datetime, location)
-                    # print('Running IFTTT automation...')
-                    bar()
-                    counter4 += 1  # counter++
-        if counter4 <= 0:  # should not fire
-            print('No new cars since last run.')
+    # # set with lines from 1st file
+    # f1 = [x for x in file_previous_run.readlines()]
+    # # print("previous", len(f1)) #debug
+    # # print(*f1, sep = "\n") #debug
+    # # set with lines from 2nd file
+    # f2 = [x for x in file_current_run.readlines()]
+    # # print("present", len(f2)) #debug
+    # # print(*f2, sep = "\n") #debug
 
-            toast = Notification(app_id="Nie ma nowych aut",
-                                 title="OTOMOTO " + args.title,
-                                 msg=f'Nie ma nowych aut. W sumie jest {len(f2)}.',
-                                 icon=str(self_path.parent.absolute()) + "\\icons\\" + args.icon + ".png")
-            toast.add_actions(label="Idz do strony",
-                              launch=page_url_shortened[0])
-            toast.show()
+    # # lines present only in 1st file
+    # diff = [line for line in f1 if line not in f2]
+    # # print("previous_diff", len(diff)) #debug
+    # # lines present only in 2nd file
+    # diff1 = [line for line in f2 if line not in f1]
+    # # print("present_diff", len(diff1)) #debug
+    # # *NOTE file2 must be > file1
 
-        else:
-            print(counter4, "new cars found since last run! Go check them now!")
+    # if len(diff1) == 0:  # check if set is empty - if it is then there are no differences between files
+    #     print('Files are the same.')
 
-            toast = Notification(app_id="Nowe Auta",
-                                 title="OTOMOTO " + args.title,
-                                 msg=f'Są nowe auta: {counter4}. W sumie jest {len(f2)}.',
-                                 icon=str(self_path.parent.absolute()) + "\\icons\\" + args.icon + ".png")
-            toast.add_actions(label="Idz do strony",
-                              launch=page_url_shortened[0])
-            toast.show()
+    #     toast = Notification(app_id="Nie ma nowych aut",
+    #                          title="OTOMOTO " + args.title,
+    #                          msg=f'Nie ma nowych aut. W sumie jest {len(f2)}.',
+    #                          icon=str(self_path.parent.absolute()) + "\\icons\\" + args.icon + ".png")
+    #     toast.add_actions(label="Idz do strony",
+    #                       launch=page_url_shortened[0])
+    #     toast.show()
 
-            time.sleep(5)
-            # webbrowser.open(page_url)
-            open_url()
+    # else:
+    #     with open(args.prefix + '/output/diff/diff-' + this_run_datetime + '.txt', 'w') as w:
+    #         counter4 = 0  # counter
+    #         with alive_bar(bar="circles", spinner="dots_waves") as bar:
+    #             for url in diff1:  # go piece by piece through the differences
+    #                 w.write(url)  # write to file
+    #                 # run IFTTT automation with URL
+    #                 #run_ifttt_automation(url, this_run_datetime, location)
+    #                 # print('Running IFTTT automation...')
+    #                 bar()
+    #                 counter4 += 1  # counter++
+    #     if counter4 <= 0:  # should not fire
+    #         print('No new cars since last run.')
+
+    #         # toast = Notification(app_id="Nie ma nowych aut",
+    #         #                      title="OTOMOTO " + args.title,
+    #         #                      msg=f'Nie ma nowych aut. W sumie jest {len(f2)}.',
+    #         #                      icon=str(self_path.parent.absolute()) + "\\icons\\" + args.icon + ".png")
+    #         # toast.add_actions(label="Idz do strony",
+    #         #                   launch=page_url_shortened[0])
+    #         # toast.show()
+
+    #     else:
+    #         print(counter4, "new cars found since last run! Go check them now!")
+
+    #         # toast = Notification(app_id="Nowe Auta",
+    #         #                      title="OTOMOTO " + args.title,
+    #         #                      msg=f'Są nowe auta: {counter4}. W sumie jest {len(f2)}.',
+    #         #                      icon=str(self_path.parent.absolute()) + "\\icons\\" + args.icon + ".png")
+    #         # toast.add_actions(label="Idz do strony",
+    #         #                   launch=page_url_shortened[0])
+    #         # toast.show()
+
+    #         time.sleep(5)
+    #         # webbrowser.open(page_url)
+    #         open_url()
 
 except IOError:
     print("No previous data - can't diff.")
-
-else:
-    print("Keyword was provided; search was successful.")
-    # TODO: same as above but with /[x]-search_keyword.txt
 
 # === run time ===
 
