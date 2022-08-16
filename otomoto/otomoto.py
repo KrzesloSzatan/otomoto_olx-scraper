@@ -212,8 +212,9 @@ while page_number <= number_of_pages_to_crawl:
                 page_vin = urlopen(url, context=ssl.create_default_context(
                     cafile=certifi.where()))  # fix certificate issue
                 soup_vin = BeautifulSoup(page_vin, 'html.parser')
+                #print(str(soup_vin.find('div', {'class': 'carfax-wrapper'})))
                 vin = re.findall(
-                    r'(?<=vin=)(.*?)(?=\&)', str(soup_vin.find('div', {'class': 'carfax-wrapper'})))
+                    r'(?<=vin=)(.*?)(?=\")', str(soup_vin.find('div', {'class': 'carfax-wrapper'})))
                 if vin == []:
                     vin = ['No VIN Found.']
                 vins.append(vin[0])
