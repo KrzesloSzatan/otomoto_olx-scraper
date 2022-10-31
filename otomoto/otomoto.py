@@ -25,6 +25,16 @@ from sys import platform  # check platform (Windows/Linux/macOS)
 import argparse
 from pathlib import Path
 import random
+from twilio.rest import Client
+
+# Import smtplib for the actual sending function
+import smtplib
+
+# Here are the email package modules we'll need
+from email.mime.image import MIMEImage
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.utils import formataddr
 
 
 self_path = Path(os.path.abspath(__file__))
@@ -127,10 +137,6 @@ print("Page URL:", page_url_shortened[0])
 #    report["value3"] = location
 #    requests.post(webhook_url, data=report)
 
-# === pimp Windows 10 notification ===
-
-# https://stackoverflow.com/questions/63867448/interactive-notification-windows-10-using-python
-
 # === Function to open url after search ===
 
 def open_url():
@@ -150,15 +156,6 @@ soup = BeautifulSoup(page, 'html.parser')  # parse the page
 
 # def pullData(page_url):
 
-
-# # *NOTE 1/2: perhaps no longer needed as of 0.10?
-# try:
-#     open(r"output/" + this_run_datetime + "/1-output.txt",
-#          "w").close()  # clean main file at start
-# except:  # crashes on 1st run when file is not yet created
-#     print("Nothing to clean, moving on...")
-# # *NOTE 2/2: ^
-
 number_of_pages_to_crawl = ([item.get_text(strip=True) for item in soup.find_all(
     'a', {'class': 'ooa-g4wbjr'})])  # get page numbers from the bottom of the page
 
@@ -172,229 +169,165 @@ print('How many pages are there to crawl?', number_of_pages_to_crawl)
 page_prefix = '&page='
 page_number = 1  # begin at page=1
 # for page in range(1, number_of_pages_to_crawl+1):
-while page_number <= number_of_pages_to_crawl:
-    print("Page number:", page_number, "/",
-          number_of_pages_to_crawl)
-    full_page_url = f"{page_url}{page_prefix}{page_number}"
-    # pullData(full_page_url)  # throw URL to function
 
-    page = urlopen(full_page_url, context=ssl.create_default_context(
-        cafile=certifi.where()))  # fix certificate issue
-    soup = BeautifulSoup(page, 'html.parser')  # parse the page
+lista = []
 
-    # can't crawl too often? works better with OTOMOTO limits perhaps
-    pause_duration = 5  # seconds to wait
-    print("Waiting for", pause_duration, "seconds before opening URL...")
-    with alive_bar(pause_duration, bar="circles", spinner="dots_waves") as bar:
-        for second in range(0, pause_duration):
+while lista == [] or lista == None or lista == [None]:
+    while page_number <= number_of_pages_to_crawl:
+        print("Page number:", page_number, "/",
+              number_of_pages_to_crawl)
+        full_page_url = f"{page_url}{page_prefix}{page_number}"
+        # pullData(full_page_url)  # throw URL to function
+
+        page = urlopen(full_page_url, context=ssl.create_default_context(
+            cafile=certifi.where()))  # fix certificate issue
+        soup = BeautifulSoup(page, 'html.parser')  # parse the page
+
+        # can't crawl too often? works better with OTOMOTO limits perhaps
+        pause_duration = 5  # seconds to wait
+        print("Waiting for", pause_duration, "seconds before opening URL...")
+        with alive_bar(pause_duration, bar="circles", spinner="dots_waves") as bar:
+            for second in range(0, pause_duration):
+                time.sleep(1)
+                bar()
+        print("Scraping page...")
+
+        urls = []
+        #vins = []
+
+        hrefy = soup.find_all('a', href=re.compile('oferta'))
+        ceny = soup.find_all('span', {'class': 'ooa-1bmnxg7'})
+
+        for url in hrefy:
+            if url.get('href') not in urls:
+                urls.append(url.get('href'))  # Add clean URLs to the list
+
+        # === Scraping VINs === Doesnt work anymore since Otomoto has changed autodna link to javascript generated
+
+        # with alive_bar(bar="classic2", spinner="classic") as bar:
+
+        #     for url in urls:
+        #         try:
+        #             print('Scraping VIN of ' + url)
+        #             time.sleep(2)
+        #             page_vin = urlopen(url, context=ssl.create_default_context(
+        #                 cafile=certifi.where()))  # fix certificate issue
+        #             soup_vin = BeautifulSoup(page_vin, 'html.parser')
+        #             #print(str(soup_vin.find('div', {'class': 'carfax-wrapper'})))
+        #             vin = re.findall(
+        #                 r'(?<=vin=)(.*?)(?=\")', str(soup_vin.find('div', {'class': 'carfax-wrapper'})))
+        #             if vin == []:
+        #                 vin = ['No VIN Found.']
+        #             vins.append(vin[0])
+        #         except Exception as e:
+        #             with open(args.prefix + "/output/" + str(this_run_datetime) + "/1-output-error.txt", "a", encoding="utf-8") as bs_output4:
+
+        #                 bs_output4.write(
+        #                     'ERROR: ' + str(e) + 'occurred.\n' + url + '\n\n' + str(vin))
+        #                 bs_output4.close()
+        #                 print('ERROR: ', str(e), 'occurred.', url, str(vin))
+
+        countrys = []
+        for url_car in urls:
+            page_car = urlopen(url_car, context=ssl.create_default_context(
+                cafile=certifi.where()))  # fix certificate issue
             time.sleep(1)
-            bar()
-    print("Scraping page...")
+            soup_car = BeautifulSoup(page_car, 'html.parser')  # parse the page
+            country_href = soup_car.find_all(
+                'a', href=re.compile('country_origin'))
+            # country = country_href[0].get('title')
+            if country_href:
+                countrys.append(country_href[0].get('title'))
+            elif country_href == []:
+                countrys.append("Nie podano kraju pochodzenia")
 
-    urls = []
-    vins = []
+        lista = list(zip(urls, soup.find_all(
+            'span', {'class': 'ooa-1bmnxg7'}), countrys))
 
-    hrefy = soup.find_all('a', href=re.compile('oferta'))
-    ceny = soup.find_all('span', {'class': 'ooa-epvm6'})
+        # print(lista)
 
-    for url in hrefy:
-        if url.get('href') not in urls:
-            urls.append(url.get('href'))  # Add clean URLs to the list
+        # DEBUG vvvvvvvvvvvvvvvvvvvvv
 
-    # === Scraping VINs ===
-
-    with alive_bar(bar="classic2", spinner="classic") as bar:
-
-        for url in urls:
-            try:
-                print('Scraping VIN of ' + url)
-                time.sleep(2)
-                page_vin = urlopen(url, context=ssl.create_default_context(
-                    cafile=certifi.where()))  # fix certificate issue
-                soup_vin = BeautifulSoup(page_vin, 'html.parser')
-                #print(str(soup_vin.find('div', {'class': 'carfax-wrapper'})))
-                vin = re.findall(
-                    r'(?<=vin=)(.*?)(?=\")', str(soup_vin.find('div', {'class': 'carfax-wrapper'})))
-                if vin == []:
-                    vin = ['No VIN Found.']
-                vins.append(vin[0])
-            except Exception as e:
-                with open(args.prefix + "/output/" + str(this_run_datetime) + "/1-output-error.txt", "a", encoding="utf-8") as bs_output4:
-
-                    bs_output4.write(
-                        'ERROR: ' + str(e) + 'occurred.\n' + url + '\n\n' + str(vin))
-                    bs_output4.close()
-                    print('ERROR: ', str(e), 'occurred.', url, str(vin))
-
-    lista = list(zip(urls, soup.find_all(
-        'span', {'class': 'ooa-epvm6'}), vins))
-
-    # DEBUG vvvvvvvvvvvvvvvvvvvvv
-
-    with open(args.prefix + "/output/" + str(this_run_datetime) + "/1-output-debug.txt", "a", encoding="utf-8") as bs_output3:
-        # find all links with 'oferta' in the href
-
-        bs_output3.write(str(type(lista)) + ', ' + str(lista) + '\n\n')
-        bs_output3.write(str(type(hrefy)) + ', ' + str(hrefy) + '\n\n')
-        bs_output3.write(str(type(ceny)) + ', ' + str(ceny) + '\n\n')
-        bs_output3.write(str(type(vins)) + ', ' + str(vins) + '\n\n')
-
-        for link, price, vin in lista:
-            # Write URL and price to file
-            bs_output3.write(link + ', ' +
-                             price.text + ', ' + vin + '\n')
-    bs_output3.close()
-
-    # DEBUG ^^^^^^^^^^^^^^^^^^^^^
-
-    # === Writing scraped data to files ===
-
-    with open(args.prefix + "/output/" + str(this_run_datetime) + "/1-output-prices.txt", "a", encoding="utf-8") as bs_output2:
-        # find all links with 'oferta' in the href
-        for link, price, vin in lista:
-            # Write URL and price to file
-            bs_output2.write(link + ', ' +
-                             price.text + ', ' + vin + '\n')
-    bs_output2.close()
-
-    # 'a' (append) to add lines to existing file vs overwriting
-    with open(args.prefix + "/output/" + str(this_run_datetime) + "/1-output.txt", "a", encoding="utf-8") as bs_output:
-        # print (colored("Creating local file to store URLs...", 'green')) # colored text on Windows
-        counter = 0  # counter to get # of URLs/cars
-        with alive_bar(bar="classic2", spinner="classic") as bar:  # progress bar
+        with open(args.prefix + "/output/" + str(this_run_datetime) + "/1-output-debug.txt", "a", encoding="utf-8") as bs_output3:
             # find all links with 'oferta' in the href
 
-            for link in hrefy:
-                # write to file just the clean URL
-                bs_output.write(link.get('href'))
-                counter += 1  # counter ++
-                bar()  # progress bar ++
-                # print ("Adding", counter, "URL to file...")
-        print("Successfully added", counter, "cars to file.")
+            bs_output3.write(str(type(lista)) + ', ' + str(lista) + '\n\n')
+            bs_output3.write(str(type(hrefy)) + ', ' + str(hrefy) + '\n\n')
+            bs_output3.write(str(type(ceny)) + ', ' + str(ceny) + '\n\n')
+            bs_output3.write(str(type(countrys)) + ', ' +
+                             str(countrys) + '\n\n')
+            #bs_output3.write(str(type(vins)) + ', ' + str(vins) + '\n\n')
 
-    # === Taking screenshots ===
+            # for link, price, vin in lista:
+            #     # Write URL and price to file
+            #     bs_output3.write(link + ', ' +
+            #                      price.text + ', ' + vin + '\n')
+            for link, price, country in lista:
+                # Write URL and price to file
+                bs_output3.write(link + ', ' +
+                                 price.text + ', ' + country + '\n')
+        bs_output3.close()
 
-    with alive_bar(bar="classic2", spinner="classic") as bar:
-        mypath = args.prefix + "/screens"  # Path to screens folder
+        # DEBUG ^^^^^^^^^^^^^^^^^^^^^
 
-        filenames = next(walk(mypath), (None, None, []))[2]  # [] if no file
-        filenames = list(map(lambda x: x.replace('.png', ''),
-                             filenames))  # Get filenames only
+        # === Writing scraped data to files ===
 
-        screenAble = [url for url in urls if not any(
-            urls in url for urls in filenames)]  # Compare files with URLs and find only those URLs that are not already screanshotted
+        with open(args.prefix + "/output/" + str(this_run_datetime) + "/1-output-prices.txt", "a", encoding="utf-8") as bs_output2:
 
-    # actual screenshot:
+            for link, price, country in lista:
+                # Write URL and price to file
+                bs_output2.write(link + ', ' +
+                                 price.text + ', ' + country + '\n')
 
-        for link in screenAble:
-            print('Making a screenshot of ' + link)
-            options = Options()
-            options.headless = True
-            name = link.replace('https://www.otomoto.pl/oferta/', '')
-            png = name.replace('.html', '.png')
-            driver = webdriver.Firefox(options=options)
-            driver.set_window_position(0, 0)
-            driver.set_window_size(1500, 1200)
-            driver.get(link)
-            screenshot = driver.save_screenshot(
-                '.\\' + args.prefix + '/screens\\' + png)
-            driver.quit()
-            bar()
+        bs_output2.close()
 
-    page_number += 1  # go to next page
-# === get the number# of search results pages & run URLs in function ^ ===
+        # 'a' (append) to add lines to existing file vs overwriting
+        with open(args.prefix + "/output/" + str(this_run_datetime) + "/1-output.txt", "a", encoding="utf-8") as bs_output:
+            # print (colored("Creating local file to store URLs...", 'green')) # colored text on Windows
+            counter = 0  # counter to get # of URLs/cars
+            with alive_bar(bar="classic2", spinner="classic") as bar:  # progress bar
+                # find all links with 'oferta' in the href
 
+                for link in hrefy:
+                    # write to file just the clean URL
+                    bs_output.write(link.get('href'))
+                    counter += 1  # counter ++
+                    bar()  # progress bar ++
+                    # print ("Adding", counter, "URL to file...")
+            print("Successfully added", counter, "cars to file.")
 
-# === tailor the results by using a keyword: brand, model (possibly also engine size etc) ===
-# TODO: mostly broken as of 0.9; core works
+        # === Taking screenshots ===
 
-# regex_user_input = input("Jak chcesz zawęzić wyniki? Możesz wpisać markę (np. BMW) albo model (np. E39) >>> ") # for now using brand as quesion but user can put any one-word keyword
-# regex_user_input = ""
-# if len(regex_user_input) == 0:
-#     print("Keyword wasn't provided - not searching.")
-# else:
-#     regex_user_input = regex_user_input.strip()  # strip front & back
-#     print("Opening file to search for keyword:", regex_user_input)
-#     reg = re.compile(regex_user_input)  # matches "KEYWORD" in lines
-#     counter2 = 0  # another counter to get the # of search results
-#     with open(r'output/' + this_run_datetime + '/3-search_keyword.txt', 'w') as output:  # open file for writing
-#         print("Searching for keyword...")
-#         # look for keyword in the clean file without empty lines and duplicates
-#         with open(r'output/' + this_run_datetime + '/2-clean.txt', 'r', encoding='UTF-8') as clean_no_dupes_file:
-#             with alive_bar(bar="circles", spinner="dots_waves") as bar:
-#                 for line in clean_no_dupes_file:  # read file line by line
-#                     if reg.search(line):  # if there is a match anywhere in a line
-#                         output.write(line)  # write the line into the new file
-#                         counter2 += 1  # counter ++
-#                         bar()  # progress bar ++
-#                         # print ("Progress:", counter2)
-#             if counter2 == 1:
-#                 print("Found", counter2, "result.")
-#                 # if platform == "win32":
+        with alive_bar(bar="classic2", spinner="classic") as bar:
+            mypath = args.prefix + "/screens"  # Path to screens folder
 
-#                 toast = Notification(app_id=f"Nowe Auta",
-#                                      title="OTOMOTO Mazda MX-5",
-#                                      msg=f'Znaleziono {str(counter2)} Auto.  W sumie jest {len(urls)}. ',
-#                                      icon=r"C:\Users\Franz\otomoto\otomoto4\icons\mazda.png")
-#                 toast.add_actions(label="Idz do strony",
-#                                   launch=page_url_shortened[0])
-#                 toast.show()
-#                 open_url()
+            filenames = next(walk(mypath), (None, None, []))[
+                2]  # [] if no file
+            filenames = list(map(lambda x: x.replace('.png', ''),
+                                 filenames))  # Get filenames onlyF
 
-#             else:
-#                 print("Found", counter2, "results.")
-#                 # if platform == "win32":
+            screenAble = [url for url in urls if not any(
+                urls in url for urls in filenames)]  # Compare files with URLs and find only those URLs that are not already screanshotted
 
-#                 toast = Notification(app_id=f"Nowe Auta",
-#                                      title="OTOMOTO Mazda MX-5",
-#                                      msg=f'Znaleziono {str(counter2)} Auta.  W sumie jest {len(urls)}. ',
-#                                      icon=r"C:\Users\Franz\otomoto\otomoto4\icons\mazda.png")
-#                 toast.add_actions(label="Idz do strony",
-#                                   launch=page_url_shortened[0])
-#                 toast.show()
-#                 open_url()
+        # actual screenshot:
 
-# === open keyword/search results ^ in browser ===
+            for link in screenAble:
+                print('Making a screenshot of ' + link)
+                options = Options()
+                options.headless = True
+                name = link.replace('https://www.otomoto.pl/oferta/', '')
+                png = name.replace('.html', '.png')
+                driver = Firefox(options=options)
+                driver.set_window_position(0, 0)
+                driver.set_window_size(1500, 1200)
+                driver.get(link)
+                screenshot = driver.save_screenshot(
+                    '.\\' + args.prefix + '/screens\\' + png)
+                driver.quit()
+                bar()
 
-    # if counter2 != 0:
-    #     # user_choice_open_urls = input("Chcesz otworzyć linki w przeglądarce? [y/n] >>> ")
-    #     user_choice_open_urls = 'n'
-    #     if user_choice_open_urls == 'y':
-    #         with open("output/" + this_run_datetime + "/3-search_keyword.txt", 'r', encoding='UTF-8') as search_results:
-    #             counter3 = 0
-    #             print("Opening URLs in browser...")
-    #             with alive_bar(bar="circles", spinner="dots_waves") as bar:
-    #                 for line in search_results:  # go through the file
-    #                     webbrowser.open(line)  # open URL in browser
-    #                     counter3 += 1
-    #                     bar()
-    #         # correct grammar for multiple (URLs; them; they)
-    #         if counter3 != 1:
-    #             print("Opened ", str(counter3),
-    #                   " URLs in the browser. Go and check them before they go 404 ;)")
-    #             # if platform == "win32":
-    #             # toaster.show_toast("otomoto-scraper", "Opened " + str(counter3) +
-    #             #                    " URLs.",  icon_path="icons/www.ico", duration=None)
-    #         else:  # correct grammar for 1 (URL; it)
-    #             print("Opened", counter3,
-    #                   "URL in the browser. Go and check it before it goes 404 ;)")
-    #             # if platform == "win32":
-    #             # toaster.show_toast("otomoto-scraper", "Opened " + str(counter3) +
-    #             #                    " URL.",  icon_path="icons/www.ico", duration=None)
-    #     else:
-    #         # print ("Ok - URLs saved in 'output/search/output.txt' anyway.")
-    #         print("Ok - URLs saved to a file.")
-    #         # print("Script run time:", datetime.now()-start)
-    #         # sys.exit()
-    # else:
-    #     print("No search results found.")
-
-# === compare files ===
-
-# try:
-#     counter2
-# except NameError:
-#     print("Variable not defined. Keyword wasn't provided.")
+        page_number += 1  # go to next page
+    # === get the number# of search results pages & run URLs in function ^ ===
 
 try:
     file_previous_run = open(args.prefix +
@@ -412,10 +345,58 @@ try:
     changes = [line for line in difflib.ndiff(
         file_1_text, file_2_text) if line.startswith('+ ') or line.startswith('- ')]
 
+    # print(changes)
+
     if len(changes) != 0:
-        with open(args.prefix + '/output/diff/diff2-' + this_run_datetime + '.txt', 'w') as w:
-            # counter4 = 0  # counter
-            with alive_bar(bar="circles", spinner="dots_waves") as bar:
+        with alive_bar(bar="circles", spinner="dots_waves") as bar:
+            try:
+                msg = MIMEMultipart()
+                msg['Subject'] = "OTOMOTO POJAWIŁO SIĘ NOWE AUTO " + args.title
+                msg_from = formataddr(
+                    ("NOWE AUTO " + args.title, 'your_sender@email.com'))
+                msg_to = ['your_receiver1@email.com',
+                            'your_receiver2@email.com']
+                msg['From'] = msg_from
+                msg['To'] = ', '.join(msg_to)
+                msg.preamble = 'test'
+
+                # Assume we know that the image files are all in PNG format
+
+                send_mail = ""
+                for url in changes:
+                    if url.startswith('+ ') and (len(re.findall(re.findall(r'(?<=\+ |\- )(.*?)(?=\,)', url)[0], str(changes))) % 2 != 0):
+                        clean_url = re.findall(
+                            r'(?<=\+ |\- )(.*?)(?=\,)', str(url))
+                        #text_msg = "Pojawiło się nowe auto: " + re.sub(r'\.html\,', '.html\n\nCena: ', url.replace('+ ', '')) + '\n\n'
+                        text_msg = "Pojawiło się nowe auto: " + \
+                            re.sub(r'\.html\,', '.html\n\nCena: ',
+                                   url.replace('+ ', '')) + '\n\n'
+                        name = url.replace(
+                            '+ https://www.otomoto.pl/oferta/', '')
+                        #png = name.replace('.html', '.png')
+                        png = re.sub(r'\.html.+\n', '.png', name)
+                        with open(mypath + "/" + png, 'rb') as fp:
+                            img = MIMEImage(fp.read())
+                        msg.attach(img)
+                        msg.attach(MIMEText(text_msg))
+                        send_mail = True
+
+                if send_mail == True:
+                    # smtp.mail.yaoo.com is an example. Put your smtp server here.
+                    s = smtplib.SMTP('smtp.mail.yahoo.com', 587)
+                    s.starttls()
+                    # credentials are setup in env variables (this case windows)
+                    s.login(os.environ.get('OTOMOTO_SMTP_USERNAME'), os.environ.get(
+                        'OTOMOTO_SMTP_PASSWORD'))
+                    try:
+                        print("Sending email about new cars")
+                        s.sendmail(msg_from, msg_to,
+                                   msg.as_string())
+                    finally:
+                        s.quit()
+            except IOError as e:
+                print(e)
+            with open(args.prefix + '/output/diff/diff2-' + this_run_datetime + '.txt', 'w') as w:
                 for url in changes:  # go piece by piece through the differences
                     w.write(url)  # write to file
                     time.sleep(1)
@@ -434,14 +415,21 @@ try:
                     if url.startswith('+ ') and (len(re.findall(re.findall(r'(?<=\+ |\- )(.*?)(?=\,)', url)[0], str(changes))) % 2 != 0):
                         clean_url = re.findall(
                             r'(?<=\+ |\- )(.*?)(?=\,)', str(url))
-                        # toast = Notification(app_id=f'{random.randint(0,100)}',
-                        toast = Notification(app_id='Nowe auto',
+
+                            # app_id is a random number because while multiple notifications they seem to overwrite itself. 
+                            # Other notifications are not that important for me but you can set this up like this for all of them.
+                            
+                        toast = Notification(app_id='Nowe auto' + ' ' + f'{random.randint(0,100)}',
+                                             # toast = Notification(app_id='Nowe auto',
                                              title="OTOMOTO " + args.title,
-                                             msg=f'Pojawiło się nowe auto !',
+                                             msg=f'Pojawiło się nowe auto !\n\n' + \
+                                                 re.findall(
+                                                     r'(?<=\,\s).*', str(url))[0],
                                              icon=str(self_path.parent.absolute()) + "\\icons\\" + args.icon + ".png")
                         toast.add_actions(label="Idz do auta",
                                           launch=clean_url[0])
                         toast.show()
+
                         bar()
                     if url.startswith('- ') and (len(re.findall(re.findall(r'(?<=\+ |\- )(.*?)(?=\,)', url)[0], str(changes))) % 2 != 0):
                         clean_url = re.findall(
@@ -455,81 +443,6 @@ try:
                             label="Zobacz pozostałe auta", launch=page_url_shortened[0])
                         toast.show()
                         bar()
-    else:
-        toast = Notification(app_id="Nie ma nowych aut",
-                             title="OTOMOTO " + args.title,
-                             msg=f'Nie ma nowych aut. W sumie jest {len(urls)}.',
-                             icon=str(self_path.parent.absolute()) + "\\icons\\" + args.icon + ".png")
-        toast.add_actions(label="Idz do strony",
-                          launch=page_url_shortened[0])
-        toast.show()
-        bar()
-
-    # # set with lines from 1st file
-    # f1 = [x for x in file_previous_run.readlines()]
-    # # print("previous", len(f1)) #debug
-    # # print(*f1, sep = "\n") #debug
-    # # set with lines from 2nd file
-    # f2 = [x for x in file_current_run.readlines()]
-    # # print("present", len(f2)) #debug
-    # # print(*f2, sep = "\n") #debug
-
-    # # lines present only in 1st file
-    # diff = [line for line in f1 if line not in f2]
-    # # print("previous_diff", len(diff)) #debug
-    # # lines present only in 2nd file
-    # diff1 = [line for line in f2 if line not in f1]
-    # # print("present_diff", len(diff1)) #debug
-    # # *NOTE file2 must be > file1
-
-    # if len(diff1) == 0:  # check if set is empty - if it is then there are no differences between files
-    #     print('Files are the same.')
-
-    #     toast = Notification(app_id="Nie ma nowych aut",
-    #                          title="OTOMOTO " + args.title,
-    #                          msg=f'Nie ma nowych aut. W sumie jest {len(f2)}.',
-    #                          icon=str(self_path.parent.absolute()) + "\\icons\\" + args.icon + ".png")
-    #     toast.add_actions(label="Idz do strony",
-    #                       launch=page_url_shortened[0])
-    #     toast.show()
-
-    # else:
-    #     with open(args.prefix + '/output/diff/diff-' + this_run_datetime + '.txt', 'w') as w:
-    #         counter4 = 0  # counter
-    #         with alive_bar(bar="circles", spinner="dots_waves") as bar:
-    #             for url in diff1:  # go piece by piece through the differences
-    #                 w.write(url)  # write to file
-    #                 # run IFTTT automation with URL
-    #                 #run_ifttt_automation(url, this_run_datetime, location)
-    #                 # print('Running IFTTT automation...')
-    #                 bar()
-    #                 counter4 += 1  # counter++
-    #     if counter4 <= 0:  # should not fire
-    #         print('No new cars since last run.')
-
-    #         # toast = Notification(app_id="Nie ma nowych aut",
-    #         #                      title="OTOMOTO " + args.title,
-    #         #                      msg=f'Nie ma nowych aut. W sumie jest {len(f2)}.',
-    #         #                      icon=str(self_path.parent.absolute()) + "\\icons\\" + args.icon + ".png")
-    #         # toast.add_actions(label="Idz do strony",
-    #         #                   launch=page_url_shortened[0])
-    #         # toast.show()
-
-    #     else:
-    #         print(counter4, "new cars found since last run! Go check them now!")
-
-    #         # toast = Notification(app_id="Nowe Auta",
-    #         #                      title="OTOMOTO " + args.title,
-    #         #                      msg=f'Są nowe auta: {counter4}. W sumie jest {len(f2)}.',
-    #         #                      icon=str(self_path.parent.absolute()) + "\\icons\\" + args.icon + ".png")
-    #         # toast.add_actions(label="Idz do strony",
-    #         #                   launch=page_url_shortened[0])
-    #         # toast.show()
-
-    #         time.sleep(5)
-    #         # webbrowser.open(page_url)
-    #         open_url()
-
 except IOError:
     print("No previous data - can't diff.")
 
